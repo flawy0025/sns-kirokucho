@@ -4,696 +4,594 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>SNS 記録帳</title>
-<meta name="description" content="X・Threads・note のフォロワーやインプレッションを記録して、グラフで見返せる記録帳。記録はこのブラウザの中だけに保存されます。">
-<meta name="theme-color" content="#0d1626">
+<meta name="description" content="X・Threads・note の数字を、手帖のように一日ずつ残していく記録帳。記録はこのブラウザの中だけに保存されます。">
+<meta name="theme-color" content="#F3EFF6">
+<script>try{var t=localStorage.getItem('sns-kirokucho.theme');if(t!=='notebook'&&t!=='mist'&&t!=='night')t=matchMedia('(prefers-color-scheme: dark)').matches?'night':'notebook';if(t!=='notebook'){document.documentElement.classList.add('theme-'+t);var c={mist:'#EEF3F6',night:'#1C1A27'}[t];document.querySelector('meta[name=theme-color]').setAttribute('content',c);}}catch(e){}</script>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="SNS記録帳">
 <meta property="og:title" content="SNS 記録帳">
-<meta property="og:description" content="X・Threads・note の数字を記録して、伸びた日を見つけよう。">
+<meta property="og:description" content="数字よりも、続けてきた日々を見る手帖。">
 <meta property="og:image" content="icons/icon-512.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Noto+Sans+JP:wght@400;500;700&family=Zen+Maru+Gothic:wght@500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kiwi+Maru:wght@400;500&family=Noto+Sans+JP:wght@400;500;700&family=Quicksand:wght@500;600;700&display=swap">
 <style>
+/* Layout: one column of paper cards (header, this week's page, each place, look back, past pages, settings) on a soft ground; cards sit side by side when there is room.
+   Three colorways share every token: 手帖 (lavender paper, default), 霧 (mist and dawn), 夜 (soft dark). */
+:root {
+  color-scheme: light;
+  --bg: #F3EFF6; --panel: #FFFDFB; --panel-2: #F3EEF6; --line: #E6DDEC; --rule: #EEE7F3; --edge: #E7DEEE;
+  --fg: #3B3350; --muted: #625A75; --faint: #746C87;
+  --accent: #6A5AA0; --accent-ink: #FFFFFF; --accent-soft: #ECE7F8; --pos: #5A4A9A; --down: #625A75; --warn: #A2463E;
+  --dash: #BFB3D6;
+  --x: #6F86D0; --threads: #A57CC9; --note: #4FA383;
+  --tape1: #F6CDB8; --tape2: #F4E3A1; --tape3: #CDE8DC; --tape-ink: #4A3A33;
+  --stamp1: #F2A98E; --stamp2: #B9AEDB; --stamp3: #E8CF7A;
+  --hl: #F4E3A1; --hl-ink: #5A4A1F;
+  --tip: #FFFDFB; --overlay: rgba(59, 51, 80, 0.35); --shadow: 0 10px 24px rgba(80, 60, 120, 0.08);
+  --font-display: "Kiwi Maru", "Hiragino Mincho ProN", "Yu Mincho", "Noto Sans JP", serif;
+  --font-body: "Noto Sans JP", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
+  --font-num: "Quicksand", "Noto Sans JP", system-ui, sans-serif;
+  --r: 22px;
+}
+:root.theme-mist {
+  color-scheme: light;
+  --bg: #EEF3F6; --panel: #FFFFFF; --panel-2: #F0F4F7; --line: #DCE5EB; --rule: #E9EFF3; --edge: #DCE5EB;
+  --fg: #2F3B47; --muted: #546270; --faint: #66737F;
+  --accent: #A9553F; --accent-ink: #FFFFFF; --accent-soft: #F7E9E3; --pos: #3E7376; --down: #546270; --warn: #9E3F31;
+  --dash: #BCCAD3;
+  --x: #4F7FA6; --threads: #7D72AE; --note: #4F9488;
+  --tape1: #F4D8CC; --tape2: #D9E8EE; --tape3: #DCEAE3; --tape-ink: #2F3B47;
+  --stamp1: #E3A08C; --stamp2: #8FBFC2; --stamp3: #A9C2D6;
+  --hl: #F4D8CC; --hl-ink: #6B2F20;
+  --tip: #FFFFFF; --overlay: rgba(47, 59, 71, 0.3); --shadow: 0 10px 24px rgba(40, 70, 90, 0.07);
+}
+:root.theme-night {
+  color-scheme: dark;
+  --bg: #1C1A27; --panel: #272434; --panel-2: #302C40; --line: #3D3852; --rule: #322E44; --edge: #15131D;
+  --fg: #EDE8F5; --muted: #B6ADC9; --faint: #9C93B0;
+  --accent: #B9A8F0; --accent-ink: #1C1A27; --accent-soft: #3A3456; --pos: #CDBFFF; --down: #B6ADC9; --warn: #F0A59A;
+  --dash: #5A5374;
+  --x: #93A8EC; --threads: #C7A2E6; --note: #6FCAA6;
+  --tape1: #C99280; --tape2: #CBB873; --tape3: #7DB49D; --tape-ink: #1C1A27;
+  --stamp1: #D9917A; --stamp2: #9F90D6; --stamp3: #CDB565;
+  --hl: #CBB873; --hl-ink: #1C1A27;
+  --tip: #302C40; --overlay: rgba(8, 6, 14, 0.6); --shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
+}
+
 html { -webkit-text-size-adjust: 100%; }
-:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); background: #0d1626; }
-:root.theme-warm { background: #fbf0e8; }
-:root.theme-fresh { background: #edf6f0; }
-body { margin: 0; font-size: 14px; }
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); background: var(--bg); }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 14px; line-height: 1.65; -webkit-font-smoothing: antialiased; }
 img { max-width: 100%; }
 [hidden] { display: none !important; }
-
-/* Layout: a night-sky header with the summary floating over the horizon, then media cards, trends, the record book and data tools. One deliberate dark look, with two in-page alternates (dusk, forest morning). */
-:root {
-  color-scheme: dark;
-  --bg: #0d1626; --panel: #15223a; --panel-2: #1c2b47; --line: rgba(160, 185, 230, .15);
-  --fg: #eef2fb; --muted: #9eacc6; --faint: #6f7d99;
-  --gold: #f6c94e; --gold-ink: #2a2006; --gold-soft: rgba(246, 201, 78, .15);
-  --x: #6aa8ff; --threads: #b38bff; --note: #3fd0a0;
-  --up: #72e0a3; --down: #ff8f8f; --tip: #101b30; --overlay: rgba(4, 9, 18, .62);
-  --shadow: 0 12px 32px rgba(0, 0, 0, .3);
-  --hero-fg: #f4f6fc; --hero-muted: #c3cbe0;
-  --sky1: #08101f; --sky2: #1b2949; --sky3: #5b4662; --glow: #f0a46c;
-  --mt1: #2b3759; --mt2: #1d2843; --star: #ffffff; --orb: #f7e8b0;
-  --font-display: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "Noto Sans JP", sans-serif;
-  --font-body: "Noto Sans JP", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
-  --font-num: "Manrope", "Noto Sans JP", system-ui, sans-serif;
-  --r: 20px;
-}
-:root.theme-warm {
-  color-scheme: light;
-  --bg: #fbf0e8; --panel: #fffaf6; --panel-2: #fbebe0; --line: rgba(120, 70, 50, .15);
-  --fg: #3a2622; --muted: #86665d; --faint: #ad9087;
-  --gold: #e38f35; --gold-ink: #ffffff; --gold-soft: rgba(227, 143, 53, .15);
-  --x: #3b7be3; --threads: #8b58d6; --note: #179f74;
-  --up: #1c925a; --down: #d14646; --tip: #fffaf6; --overlay: rgba(70, 35, 25, .35);
-  --shadow: 0 10px 26px rgba(120, 60, 40, .12);
-  --hero-fg: #3a2321; --hero-muted: #6e4a43;
-  --sky1: #f2957a; --sky2: #f8c4a2; --sky3: #fde5ce; --glow: #ffd79e;
-  --mt1: #d7a0a2; --mt2: #b78292; --star: transparent; --orb: #fff3d8;
-}
-:root.theme-fresh {
-  color-scheme: light;
-  --bg: #edf6f0; --panel: #fbfefc; --panel-2: #e3f1e8; --line: rgba(40, 90, 70, .15);
-  --fg: #1d3a2f; --muted: #587769; --faint: #8fa99b;
-  --gold: #d79f1c; --gold-ink: #ffffff; --gold-soft: rgba(215, 159, 28, .15);
-  --x: #2f7dd6; --threads: #7d55cf; --note: #12a072;
-  --up: #16915a; --down: #cf4747; --tip: #fbfefc; --overlay: rgba(20, 50, 40, .32);
-  --shadow: 0 10px 26px rgba(30, 80, 60, .1);
-  --hero-fg: #17352a; --hero-muted: #45685a;
-  --sky1: #96cfe6; --sky2: #cbe9e3; --sky3: #f0f8ea; --glow: #fff6c9;
-  --mt1: #8ec6a7; --mt2: #5f9f81; --star: transparent; --orb: #fffbe6;
-}
-body { background: var(--bg); color: var(--fg); font-family: var(--font-body); line-height: 1.6; -webkit-font-smoothing: antialiased; }
 *, *::before, *::after { box-sizing: border-box; }
-h1, h2, h3, p, dl, dd, fieldset, figure { margin: 0; }
+h1, h2, h3, p, ol, dl, dd, fieldset, figure { margin: 0; }
 button, input, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
-:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+:focus-visible { outline: 2.5px solid var(--accent); outline-offset: 2px; }
 .num, .big, .mid { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
 .app b.v { font-weight: 700; font-family: var(--font-num); font-variant-numeric: tabular-nums; }
-.up { color: var(--up); }
+.up { color: var(--pos); }
 .down { color: var(--down); }
 
-.app { max-width: 1180px; margin-inline: auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 16px 40px; }
+.app { max-width: 1120px; margin-inline: auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 26px 40px; display: grid; gap: 24px; }
 
-/* hero */
-.hero { position: relative; isolation: isolate; overflow: hidden; border-radius: 26px; padding: 20px clamp(16px, 3.6vw, 34px) 84px; border: 1px solid var(--line); }
-.sky { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; display: block; }
-.hero-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; }
-.hero-date { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--hero-muted); }
-.hero-date svg { color: var(--gold); }
-.hero-date b.v { color: var(--hero-fg); }
-.themes { display: flex; gap: 4px; padding: 4px; border-radius: 999px; background: color-mix(in srgb, var(--panel) 72%, transparent); border: 1px solid var(--line); backdrop-filter: blur(8px); }
-.theme { display: flex; align-items: center; gap: 6px; padding: 4px 10px 4px 4px; border: 0; border-radius: 999px; background: transparent; font-size: 12px; color: var(--muted); white-space: nowrap; }
-.theme[aria-pressed="true"] { background: var(--gold-soft); color: var(--fg); box-shadow: inset 0 0 0 1px var(--gold); }
-.sw { width: 20px; height: 20px; border-radius: 50%; flex: none; border: 1px solid rgba(255, 255, 255, .35); }
-.sw.dark { background: linear-gradient(170deg, #0a1222 20%, #3a4a74 70%, #f0a46c); }
-.sw.warm { background: linear-gradient(170deg, #f2957a 10%, #f8c4a2 55%, #b78292); }
-.sw.fresh { background: linear-gradient(170deg, #96cfe6 10%, #cbe9e3 50%, #5f9f81); }
-.hero-main { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px; margin-top: 14px; }
-.title { display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-size: clamp(30px, 5.6vw, 44px); font-weight: 700; letter-spacing: .04em; line-height: 1.2; color: var(--hero-fg); text-wrap: balance; }
-.title svg { color: var(--gold); flex: none; }
-.lead { margin-top: 8px; font-size: 15px; color: var(--hero-muted); }
-.star { opacity: .8; }
-@media (max-width: 640px) { .orb { display: none; } }
-@media (prefers-reduced-motion: no-preference) {
-  .star { animation: twinkle 3.6s ease-in-out infinite alternate; }
-  .star:nth-child(3n) { animation-delay: 1.2s; }
-  .star:nth-child(3n+1) { animation-delay: 2.1s; }
-}
-@keyframes twinkle { from { opacity: .2; } to { opacity: 1; } }
+/* paper */
+.paper { position: relative; background: var(--panel); border-radius: var(--r); box-shadow: 0 4px 0 var(--edge), var(--shadow); min-width: 0; }
+.ruled { background-image: repeating-linear-gradient(180deg, transparent 0 31px, var(--rule) 31px 32px); }
+.tape { position: absolute; top: -11px; left: 18px; padding: 3px 14px; background: var(--tape3); color: var(--tape-ink); font: 500 13px var(--font-display); transform: rotate(-2deg); white-space: nowrap; }
+.tape.t1 { background: var(--tape1); }
+.tape.t2 { background: var(--tape2); }
 
-.btn-gold { display: inline-flex; align-items: center; gap: 8px; padding: 11px 20px; border: 0; border-radius: 14px; background: var(--gold); color: var(--gold-ink); font-weight: 700; font-size: 15px; box-shadow: 0 8px 22px color-mix(in srgb, var(--gold) 35%, transparent); white-space: nowrap; }
-.btn-gold:hover { filter: brightness(1.05); }
-.btn-gold.sm { padding: 8px 16px; font-size: 13px; border-radius: 12px; box-shadow: none; }
-.btn-gold:disabled { opacity: .55; cursor: default; }
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel-2); font-size: 13px; color: var(--fg); white-space: nowrap; }
-.btn:hover { border-color: color-mix(in srgb, var(--gold) 55%, var(--line)); }
-.btn:disabled { opacity: .5; cursor: default; }
-.btn.danger { color: var(--down); }
+/* buttons */
+.btn-main { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 20px; border: 0; border-radius: 16px; background: var(--accent); color: var(--accent-ink); font-weight: 700; font-size: 15px; white-space: nowrap; }
+.btn-main.sm { min-height: 42px; padding: 0 16px; font-size: 13px; border-radius: 14px; }
+.btn-main:disabled { opacity: 0.55; cursor: default; }
+.btn-soft { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 18px; border-radius: 16px; border: 1.5px dashed var(--dash); background: var(--panel); color: var(--fg); font-weight: 700; font-size: 15px; white-space: nowrap; }
+.btn-soft svg, .btn svg { color: var(--accent); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 42px; padding: 0 14px; border-radius: 13px; border: 1.5px dashed var(--dash); background: var(--panel); color: var(--fg); font-size: 13px; white-space: nowrap; text-decoration: none; }
+.btn:disabled { opacity: 0.5; cursor: default; }
+.btn.danger { border-style: solid; border-color: color-mix(in srgb, var(--warn) 40%, var(--line)); color: var(--warn); }
 .btn.file { position: relative; overflow: hidden; cursor: pointer; }
 .btn.file input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-.btn-ghost { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 14px; border: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 72%, transparent); color: var(--hero-fg); font-size: 14px; font-weight: 700; white-space: nowrap; backdrop-filter: blur(6px); }
-.btn-ghost:hover { border-color: color-mix(in srgb, var(--note) 60%, var(--line)); }
-.btn-ghost svg { color: var(--note); }
-.hero-actions { display: flex; flex-wrap: wrap; gap: 10px; }
-.link-btn { border: 0; background: none; padding: 0; color: var(--gold); font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
 
-/* main */
-.main { position: relative; display: grid; gap: 22px; margin-top: -58px; padding-inline: clamp(0px, 1.6vw, 14px); }
-.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: clamp(14px, 2.4vw, 22px); box-shadow: var(--shadow); min-width: 0; }
-.banner { padding: 12px 16px; border-radius: 14px; border: 1px solid color-mix(in srgb, var(--gold) 45%, var(--line)); background: var(--panel); font-size: 13px; color: var(--fg); }
+/* header */
+.hero { padding: 30px 22px 22px; display: grid; gap: 10px; border-radius: 10px var(--r) var(--r) var(--r); }
+.hero .tape-a, .hero .tape-b { position: absolute; top: -10px; height: 24px; opacity: 0.92; }
+.hero .tape-a { left: 26px; width: 92px; background: var(--tape1); transform: rotate(-4deg); }
+.hero .tape-b { right: 30px; width: 64px; background: var(--tape2); transform: rotate(5deg); }
+.hero-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px 14px; }
+.hero-date { font-size: 13px; color: var(--muted); }
+.hero-date b { color: var(--fg); }
+.title { font-family: var(--font-display); font-weight: 500; font-size: clamp(30px, 6vw, 40px); letter-spacing: 0.04em; line-height: 1.3; text-wrap: balance; }
+.squiggle { display: block; width: 160px; height: 10px; color: var(--stamp1); }
+.lead { font-size: 14px; color: var(--muted); }
+.hero-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+.hero-actions > button { flex: 1 1 170px; }
+.themes { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px; border-radius: 14px; background: var(--panel-2); }
+.theme { display: flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 10px 0 6px; border: 0; border-radius: 10px; background: transparent; font-size: 12px; color: var(--muted); white-space: nowrap; }
+.theme[aria-pressed="true"] { background: var(--panel); color: var(--fg); font-weight: 700; box-shadow: 0 2px 0 var(--edge); }
+.sw { width: 20px; height: 20px; border-radius: 50%; flex: none; border: 1px solid rgba(0, 0, 0, 0.1); }
+.sw.notebook { background: linear-gradient(135deg, #F3EFF6 0 52%, #F2A98E 52%); }
+.sw.mist { background: linear-gradient(135deg, #EEF3F6 0 52%, #A9553F 52%); }
+.sw.night { background: linear-gradient(135deg, #272434 0 52%, #B9A8F0 52%); }
+
+/* notices */
+.banner { padding: 12px 16px; border-radius: 16px; background: var(--panel); box-shadow: 0 3px 0 var(--edge); font-size: 13px; }
+.notice { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px 16px; border-radius: 16px; background: var(--panel); box-shadow: 0 3px 0 var(--edge); font-size: 13px; }
+.notice p { flex: 1 1 240px; }
+.notice.hl { background: color-mix(in srgb, var(--tape2) 32%, var(--panel)); }
+.welcome { padding: 28px 18px 18px; display: grid; gap: 14px; }
+.welcome h2 { font-family: var(--font-display); font-weight: 500; font-size: 21px; }
+.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); gap: 10px; padding: 0; list-style: none; }
+.steps li { display: grid; gap: 4px; align-content: start; padding: 12px 14px; border-radius: 16px; border: 1.5px solid var(--rule); }
+.steps b { font-size: 14px; }
+.steps span { font-size: 12px; color: var(--muted); }
+.privacy { font-size: 12px; color: var(--muted); }
+
+/* this week */
+.summary { padding: 26px 18px 18px; display: grid; gap: 16px; }
+.sum-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.sum-range { flex: 1 1 auto; font-size: 12px; color: var(--muted); }
+.seg { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 3px; border-radius: 12px; background: var(--panel-2); }
+.seg button { min-height: 32px; padding: 0 12px; border: 0; border-radius: 10px; background: transparent; font-size: 12px; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--panel); color: var(--fg); font-weight: 700; box-shadow: 0 2px 0 var(--edge); }
+.seg.solid button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); box-shadow: none; }
+.stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (min-width: 760px) { .stats { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.stat { border: 1.5px solid var(--rule); border-radius: 16px; padding: 12px 14px; display: grid; gap: 2px; align-content: start; min-width: 0; }
 .lbl { font-size: 12px; color: var(--muted); }
-.big { font-size: 27px; font-weight: 800; line-height: 1.25; }
+.big { font-size: 28px; font-weight: 700; line-height: 1.25; }
 .big small, .mid small { margin-left: 3px; font-family: var(--font-body); font-size: 12px; font-weight: 500; color: var(--muted); }
-.mid { font-size: 18px; font-weight: 800; }
 .sub { font-size: 12px; color: var(--muted); }
-.ico { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; flex: none; background: var(--gold-soft); color: var(--gold); }
-
-.seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel-2); }
-.seg button { padding: 5px 13px; border: 0; border-radius: 999px; background: transparent; font-size: 12px; color: var(--muted); }
-.seg button[aria-pressed="true"] { background: var(--gold); color: var(--gold-ink); font-weight: 700; }
-
-/* summary */
-.summary { display: grid; gap: 16px; }
-.sum-head { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
-.sum-head h2 { font-family: var(--font-display); font-size: 18px; font-weight: 700; }
-.sum-head .seg { margin-left: auto; }
-.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.stat { display: flex; align-items: center; gap: 12px; padding: 4px 16px; border-left: 1px solid var(--line); min-width: 0; }
-.stat:first-child { border-left: 0; padding-left: 0; }
-.stat .ico { width: 38px; height: 38px; }
-.s-fol .ico { background: color-mix(in srgb, var(--x) 16%, transparent); color: var(--x); }
-.s-imp .ico { background: color-mix(in srgb, var(--threads) 16%, transparent); color: var(--threads); }
-.s-pv .ico { background: color-mix(in srgb, var(--note) 16%, transparent); color: var(--note); }
-@media (max-width: 860px) {
-  .stats { grid-template-columns: 1fr 1fr; gap: 10px; }
-  .stat, .stat:first-child { border-left: 0; padding: 12px; border-radius: 14px; background: var(--panel-2); }
-}
-@media (max-width: 400px) {
-  .stat, .stat:first-child { flex-direction: column; align-items: flex-start; gap: 8px; }
-  .big { font-size: 23px; }
-}
+.stamps-box { border-radius: 18px; background: color-mix(in srgb, var(--tape2) 20%, var(--panel)); padding: 14px; display: grid; gap: 10px; }
+.stamps-title { font: 500 14px var(--font-display); }
+.stamps { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; max-width: 360px; }
+.stamp { aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center; border: 1.5px dashed var(--dash); }
+.stamp.today { border-color: var(--accent); border-style: solid; }
+.stamp.on { border: 0; background: var(--stamp1); }
+.stamp.on.s2 { background: var(--stamp2); }
+.stamp.on.s3 { background: var(--stamp3); }
+.stamp.on.today { background: var(--accent); }
+.stamp svg { width: 56%; height: 56%; fill: var(--panel); }
+.stamps-text { font-size: 13px; line-height: 1.75; }
+.stamps-text b { font: 700 16px var(--font-num); color: var(--pos); }
+.sum-foot { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 
 /* section heads */
-.sec-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 6px 16px; margin-bottom: -8px; }
-.sec-head h2 { display: flex; align-items: center; gap: 8px; font-family: var(--font-display); font-size: 20px; font-weight: 700; }
-.sec-head h2 svg { color: var(--note); }
-.sec-head p { font-size: 13px; color: var(--muted); }
+.sec-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; padding: 4px 4px 0; margin-bottom: -6px; }
+.sec-head h2 { font-family: var(--font-display); font-weight: 500; font-size: 21px; }
+.sec-head p { font-size: 12px; color: var(--muted); }
 
-/* media cards */
-.pfs { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 272px), 1fr)); gap: 16px; }
-.pf { --c: var(--x); display: grid; gap: 14px; align-content: start; min-width: 0; padding: 18px; border-radius: var(--r); border: 1px solid color-mix(in srgb, var(--c) 34%, var(--line)); background: linear-gradient(158deg, color-mix(in srgb, var(--c) 17%, var(--panel)) 0%, var(--panel) 64%); box-shadow: var(--shadow); }
+/* each place */
+.pfs { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr)); gap: 26px 16px; }
+.pf { --c: var(--x); padding: 24px 18px 16px; display: grid; gap: 12px; align-content: start; }
 .pf-threads { --c: var(--threads); }
 .pf-note { --c: var(--note); }
-.pf-head { display: flex; align-items: center; gap: 12px; }
-.badge { width: 44px; height: 44px; flex: none; display: grid; place-items: center; border-radius: 14px; background: var(--c, var(--x)); color: #fff; font-family: var(--font-num); font-size: 17px; font-weight: 800; box-shadow: 0 6px 18px color-mix(in srgb, var(--c, var(--x)) 40%, transparent); }
-.badge.sm { width: 26px; height: 26px; border-radius: 8px; font-size: 12px; box-shadow: none; }
-.pf-head h3 { font-family: var(--font-display); font-size: 18px; font-weight: 700; }
-.pf-head p { font-size: 12px; color: var(--muted); }
-.tag { margin-left: auto; padding: 3px 10px; border-radius: 999px; background: var(--gold); color: var(--gold-ink); font-size: 11px; font-weight: 700; white-space: nowrap; }
-.pf-main { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: color-mix(in srgb, var(--bg) 55%, transparent); }
-.chip { padding: 6px 10px; border-radius: 10px; background: color-mix(in srgb, var(--c) 16%, transparent); font-size: 13px; white-space: nowrap; }
+.pf .tape { background: color-mix(in srgb, var(--c) 34%, var(--panel)); color: var(--fg); font: 700 13px var(--font-num); }
+.pf-meta { font-size: 11px; color: var(--faint); text-align: right; }
+.pf-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 10px; }
+.chip { padding: 6px 12px; border-radius: 999px; background: var(--panel-2); font-size: 12px; color: var(--muted); white-space: nowrap; }
 .since { font-size: 12px; color: var(--muted); }
-.pf-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.pf-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 10px 0; border-top: 1px dashed var(--line); border-bottom: 1px dashed var(--line); }
 .pf-stats > div { min-width: 0; }
-.spark { position: relative; height: 56px; }
-.cap { margin-top: -8px; font-size: 11px; color: var(--faint); }
+.mid { font-size: 17px; font-weight: 700; }
+.spark { position: relative; height: 54px; }
+.cap { margin-top: -6px; font-size: 11px; color: var(--faint); }
 
-/* chart cards */
+/* look back */
 .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr)); gap: 16px; }
+.card { padding: 18px; }
 .card-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 10px 14px; margin-bottom: 12px; }
 .card-head > div:first-child { min-width: 0; }
-.card-head h2 { font-family: var(--font-display); font-size: 17px; font-weight: 700; }
+.card-head h2 { font-family: var(--font-display); font-weight: 500; font-size: 17px; }
 .card-head p { font-size: 12px; color: var(--muted); }
 .legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--muted); }
 .legend span { display: inline-flex; align-items: center; gap: 5px; }
-.legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.legend i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 .chart { position: relative; min-height: 230px; }
 .chart.short { min-height: 210px; }
+.best { margin-top: 10px; padding: 10px 12px; border-radius: 14px; background: color-mix(in srgb, var(--hl) 38%, var(--panel)); font-size: 12px; }
+.best:empty { display: none; }
 .footnote { margin-top: 8px; font-size: 11px; color: var(--faint); }
 .svg { display: block; overflow: visible; font-family: var(--font-num); }
 .tick text, text.tick { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
-.gridline { stroke: var(--line); stroke-width: 1; }
-.bar { transition: opacity .15s; }
-.bar.dim { opacity: .35; }
+.gridline { stroke: var(--rule); stroke-width: 1; }
+.bar { transition: opacity 0.15s; }
+.bar.dim { opacity: 0.45; }
 .break { stroke: var(--panel); stroke-width: 2.5; }
-.endlabel { font-size: 12px; font-weight: 800; }
+.endlabel { font-size: 12px; font-weight: 700; }
 .rule { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; }
-.tip { position: absolute; z-index: 5; pointer-events: none; min-width: 128px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--tip); color: var(--fg); box-shadow: 0 10px 24px rgba(0, 0, 0, .22); font-size: 12px; white-space: nowrap; }
+.best-tag text { font-family: var(--font-body); }
+.tip { position: absolute; z-index: 5; pointer-events: none; min-width: 128px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--tip); color: var(--fg); box-shadow: var(--shadow); font-size: 12px; white-space: nowrap; }
 .tip-h { margin-bottom: 3px; color: var(--muted); }
 .tip-r { display: flex; align-items: center; gap: 6px; }
-.tip-r i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
-.tip-r b { margin-left: auto; padding-left: 14px; font-family: var(--font-num); font-weight: 800; font-variant-numeric: tabular-nums; }
+.tip-r i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.tip-r b { margin-left: auto; padding-left: 14px; font-family: var(--font-num); font-weight: 700; font-variant-numeric: tabular-nums; }
 .empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 8px; color: var(--muted); font-size: 12px; text-align: center; }
 
-/* record table */
-.count { padding: 3px 10px; border-radius: 999px; background: var(--panel-2); font-size: 12px; color: var(--muted); }
-.tbl-wrap { max-height: 520px; overflow: auto; border: 1px solid var(--line); border-radius: 14px; }
-.tbl { width: 100%; min-width: 760px; border-collapse: collapse; font-size: 13px; }
-.tbl th { position: sticky; top: 0; z-index: 1; padding: 9px 10px; background: var(--panel-2); color: var(--muted); font-size: 11px; font-weight: 600; text-align: right; white-space: nowrap; }
+/* past pages */
+.count { font: 700 13px var(--font-num); color: var(--pos); }
+.tbl-wrap { max-height: 520px; overflow: auto; border-radius: 14px; }
+.tbl { width: 100%; min-width: 720px; border-collapse: collapse; font-size: 13px; }
+.tbl th { position: sticky; top: 0; z-index: 1; padding: 9px 10px; background: var(--panel); color: var(--muted); font-size: 11px; font-weight: 500; text-align: right; white-space: nowrap; border-bottom: 1.5px solid var(--line); }
 .tbl th:first-child, .tbl td:first-child, .tbl th:last-child, .tbl td:last-child { text-align: left; }
-.tbl td { padding: 10px; border-top: 1px solid var(--line); text-align: right; white-space: nowrap; font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+.tbl td { padding: 0 10px; height: 46px; border-bottom: 1px solid var(--rule); text-align: right; white-space: nowrap; font-family: var(--font-num); font-variant-numeric: tabular-nums; }
 .tbl td small { margin-left: 4px; font-size: 11px; font-weight: 700; }
-.tbl td.memo { max-width: 220px; overflow: hidden; text-overflow: ellipsis; font-family: var(--font-body); color: var(--muted); }
 .tbl td.date { font-weight: 700; }
+.tbl td.memo { max-width: 240px; overflow: hidden; text-overflow: ellipsis; font-family: var(--font-body); color: var(--muted); }
 .tbl tr.edit { cursor: pointer; }
-.tbl tr.edit:hover td, .tbl tr.edit:focus-visible td { background: color-mix(in srgb, var(--gold) 8%, transparent); }
-.tbl .gap { color: var(--faint); }
-.origin { margin-left: 6px; padding: 1px 6px; border-radius: 6px; background: var(--panel-2); color: var(--muted); font-family: var(--font-body); font-size: 10px; font-weight: 500; }
-.origin.auto { background: color-mix(in srgb, var(--note) 20%, transparent); color: var(--fg); }
-.tbl td.msg { padding: 28px 10px; text-align: center; color: var(--muted); font-family: var(--font-body); }
+.tbl tr.edit:hover td, .tbl tr.edit:focus-visible td { background: var(--accent-soft); }
+.tbl td.msg { height: auto; padding: 28px 10px; text-align: center; color: var(--muted); font-family: var(--font-body); }
+.tbl.hide-x .c-x, .tbl.hide-threads .c-threads, .tbl.hide-note .c-note, .tbl.hide-posts .c-posts { display: none; }
+.tbl.hide-x, .tbl.hide-threads { min-width: 540px; }
 
-/* data tools */
-.tool-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 14px; }
-.tool { display: grid; gap: 10px; align-content: start; padding: 16px; border-radius: 16px; border: 1px solid var(--line); background: var(--panel-2); min-width: 0; }
+/* settings */
+.tool-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap: 14px; }
+.tool { display: grid; gap: 10px; align-content: start; padding: 16px; border-radius: 16px; border: 1.5px solid var(--rule); min-width: 0; }
 .tool h3 { font-size: 15px; font-weight: 700; }
 .tool p { font-size: 13px; color: var(--muted); }
 .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .msg { font-size: 13px; color: var(--fg); }
-.msg.err { color: var(--down); }
-
-/* quote */
-.quote { position: relative; isolation: isolate; overflow: hidden; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 20px; padding: 22px 24px 42px; border: 1px solid var(--line); border-radius: var(--r); }
-.quote svg { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; }
-.quote p { display: flex; align-items: flex-start; gap: 10px; font-family: var(--font-display); font-size: 16px; color: var(--hero-fg); }
-.quote p span { color: var(--gold); font-size: 28px; line-height: .9; font-weight: 700; }
-.sign { color: var(--gold); font-family: "Segoe Script", "Snell Roundhand", "Brush Script MT", cursive; font-size: 16px; font-style: italic; transform: rotate(-4deg); }
-
-/* auto-fetch health */
-.health { display: grid; gap: 10px; padding: 10px 14px; border-radius: 16px; border: 1px solid var(--line); background: var(--panel); box-shadow: var(--shadow); }
-.health-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
-.hlabel { font-size: 12px; font-weight: 700; color: var(--muted); }
-.hchip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel-2); font-size: 12px; white-space: nowrap; }
-.hchip i { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
-.hchip b { font-weight: 700; }
-.hchip[data-state="ok"] i { background: var(--up); }
-.hchip[data-state="manual"] i { background: var(--note); }
-.hchip[data-state="error"] i, .hchip[data-state="stale"] i { background: var(--gold); }
-.hchip[data-state="expired"], .hchip[data-state="billing"] { border-color: color-mix(in srgb, var(--down) 60%, var(--line)); color: var(--down); }
-.hchip[data-state="expired"] i, .hchip[data-state="billing"] i { background: var(--down); }
-.hmeta { margin-left: auto; font-size: 11px; color: var(--faint); }
-.halert { display: grid; gap: 8px; padding: 12px 14px; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--down) 45%, var(--line)); background: color-mix(in srgb, var(--down) 9%, var(--panel)); }
-.halert.warn { border-color: color-mix(in srgb, var(--gold) 50%, var(--line)); background: color-mix(in srgb, var(--gold) 9%, var(--panel)); }
-.halert-title { font-weight: 700; font-size: 14px; }
-.halert-text { font-size: 13px; color: var(--fg); white-space: pre-line; }
-.halert .btn { text-decoration: none; }
-.pf-alert { padding: 3px 9px; border-radius: 999px; background: var(--down); color: #fff; font-size: 11px; font-weight: 700; white-space: nowrap; }
-.note-shot { justify-self: start; }
-
-/* note screenshot sheet */
-.drop { position: relative; display: grid; gap: 6px; justify-items: center; text-align: center; padding: 22px 16px; border-radius: 16px; border: 1.5px dashed color-mix(in srgb, var(--note) 60%, var(--line)); background: color-mix(in srgb, var(--note) 8%, var(--panel)); cursor: pointer; }
-.drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-.drop-title { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: 15px; }
-.drop-title svg { color: var(--note); }
-.drop .hint { max-width: 46ch; }
-.thumbs { display: flex; flex-wrap: wrap; gap: 8px; }
-.thumbs img { height: 96px; width: auto; max-width: 100%; border-radius: 10px; border: 1px solid var(--line); object-fit: cover; }
-.queue { display: grid; gap: 10px; padding: 12px 14px; border-radius: 14px; border: 1px solid color-mix(in srgb, var(--note) 45%, var(--line)); background: color-mix(in srgb, var(--note) 8%, var(--panel)); }
-.queue-text { font-size: 13px; white-space: pre-line; }
-.pending { display: grid; gap: 8px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel-2); }
-.pending ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
-.pending li { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 13px; }
-.pending li b { font-family: var(--font-num); }
-.pending li .st { color: var(--muted); }
-.pending li .st.done { color: var(--up); }
-.pending li .st.failed { color: var(--down); }
-.period-warn { padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--gold) 12%, var(--panel)); border: 1px solid color-mix(in srgb, var(--gold) 45%, var(--line)); font-size: 13px; }
-
-/* entry sheet */
-.overlay { position: fixed; inset: 0; z-index: 50; display: flex; align-items: flex-end; justify-content: center; background: var(--overlay); padding-top: calc(12px + env(safe-area-inset-top, 0px)); }
-.sheet { width: min(100%, 760px); max-height: 100%; overflow: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 22px 22px 0 0; padding-top: 16px; padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px)); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); box-shadow: var(--shadow); }
-@media (min-width: 760px) {
-  .overlay { align-items: center; padding: 24px; }
-  .sheet { border-radius: 22px; max-height: calc(100% - 8px); padding: 22px 26px; }
-}
-.sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
-.sheet-head h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; }
-.icon-btn { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--line); background: var(--panel-2); }
-.entry { display: grid; gap: 16px; }
-.field { display: grid; gap: 5px; min-width: 0; }
-.field label { font-size: 12px; font-weight: 500; color: var(--muted); }
-.field input, .field textarea { width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel-2); font-family: var(--font-num); font-size: 16px; }
-.field textarea { font-family: var(--font-body); resize: vertical; min-height: 64px; }
-.field input:focus, .field textarea:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-soft); }
-.field input.filled { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-soft); }
-.field input[aria-invalid="true"] { border-color: var(--down); }
+.msg.err { color: var(--warn); }
 .hint { font-size: 11px; color: var(--muted); min-height: 1em; }
 .hint .up, .hint .down { font-weight: 700; }
+.tgl-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.tgl { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--panel); font-size: 14px; cursor: pointer; }
+.tgl input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
+.wipe-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px 12px; margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--line); }
+
+/* footer */
+.quote { text-align: center; padding: 14px 16px 6px; display: grid; gap: 6px; }
+.quote p { font: 500 16px/1.9 var(--font-display); }
+.quote small { font-size: 11px; color: var(--muted); }
+
+/* sheets */
+.overlay { position: fixed; inset: 0; z-index: 50; display: flex; align-items: flex-end; justify-content: center; background: var(--overlay); padding-top: calc(12px + env(safe-area-inset-top, 0px)); }
+.sheet { width: min(100%, 760px); max-height: 100%; overflow: auto; background: var(--panel); border-radius: 24px 24px 0 0; padding-top: 18px; padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px)); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); box-shadow: var(--shadow); }
+@media (min-width: 760px) {
+  .overlay { align-items: center; padding: 24px; }
+  .sheet { border-radius: 24px; max-height: calc(100% - 8px); padding: 22px 26px; }
+}
+.sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+.sheet-head h2 { font-family: var(--font-display); font-weight: 500; font-size: 21px; }
+.icon-btn { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; border: 1.5px solid var(--line); background: var(--panel); flex: none; }
+.entry { display: grid; gap: 18px; }
+.field { display: grid; gap: 5px; min-width: 0; }
+.field label { font-size: 12px; font-weight: 500; color: var(--muted); }
+.field input, .field textarea { width: 100%; min-height: 46px; padding: 10px 12px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--panel-2); font-family: var(--font-num); font-size: 16px; color: var(--fg); }
+.field textarea { font-family: var(--font-body); resize: vertical; min-height: 72px; line-height: 1.8; }
+.field input:focus, .field textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.field input.filled { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.field input[aria-invalid="true"] { border-color: var(--warn); }
 .date-row { display: grid; grid-template-columns: minmax(0, 220px) 1fr; gap: 6px 14px; align-items: end; }
 @media (max-width: 480px) { .date-row { grid-template-columns: 1fr; } }
-.pset { border: 1px solid color-mix(in srgb, var(--c) 30%, var(--line)); border-radius: 16px; padding: 12px 14px 14px; background: color-mix(in srgb, var(--c) 6%, var(--panel)); min-width: 0; }
-.pset legend { display: flex; align-items: center; gap: 8px; padding: 0 6px; font-weight: 700; }
-.ps-x { --c: var(--x); }
+.pset { --c: var(--x); border: 1.5px solid var(--rule); border-radius: 18px; padding: 6px 14px 14px; min-width: 0; }
+.pset legend { padding: 3px 12px; background: color-mix(in srgb, var(--c) 34%, var(--panel)); font: 700 13px var(--font-num); transform: rotate(-2deg); }
 .ps-threads { --c: var(--threads); }
 .ps-note { --c: var(--note); }
 .fgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); gap: 10px 12px; margin-top: 6px; }
-.shot { display: grid; gap: 8px; padding: 14px; border-radius: 16px; border: 1px dashed color-mix(in srgb, var(--gold) 55%, var(--line)); background: var(--gold-soft); }
-.shot-title { font-weight: 700; font-size: 14px; }
+.shot { display: grid; gap: 10px; padding: 14px; border-radius: 18px; border: 1.5px dashed var(--dash); background: color-mix(in srgb, var(--tape2) 16%, var(--panel)); }
+.ocr-head { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between; }
+.shot-title { font: 500 15px var(--font-display); }
 .shot-status { font-size: 13px; white-space: pre-line; }
-.shot-status.err { color: var(--down); }
+.shot-status.err { color: var(--warn); }
+.thumbs { display: flex; flex-wrap: wrap; gap: 8px; }
+.thumbs img { height: 96px; width: auto; max-width: 100%; border-radius: 10px; border: 1px solid var(--line); object-fit: cover; }
+.progress { height: 6px; border-radius: 999px; background: var(--panel-2); overflow: hidden; }
+.progress i { display: block; height: 100%; width: 0; background: var(--accent); transition: width 0.2s; }
+.ocr-chips { display: grid; gap: 6px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.nchip { display: inline-flex; align-items: baseline; gap: 6px; min-height: 36px; padding: 6px 10px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--panel); font-size: 12px; color: var(--fg); }
+.nchip:hover { border-color: var(--accent); }
+.nchip b { font-family: var(--font-num); font-size: 14px; font-weight: 700; }
+.nchip span { color: var(--muted); max-width: 10em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .memo-count { justify-self: end; font-size: 11px; color: var(--muted); }
 .sheet-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding-top: 4px; }
 .sheet-foot .spacer { flex: 1; }
-.form-err { flex-basis: 100%; font-size: 13px; color: var(--down); }
+.form-err { flex-basis: 100%; font-size: 13px; color: var(--warn); }
 .form-err:empty { display: none; }
-
-.toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); z-index: 60; transform: translateX(-50%); padding: 10px 18px; border-radius: 999px; background: var(--gold); color: var(--gold-ink); font-weight: 700; font-size: 14px; box-shadow: var(--shadow); }
-
-/* public version */
-.notice { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px 16px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel); box-shadow: var(--shadow); font-size: 13px; }
-.notice p { flex: 1 1 240px; margin: 0; }
-.notice.gold { border-color: color-mix(in srgb, var(--gold) 50%, var(--line)); }
-.welcome { display: grid; gap: 14px; }
-.welcome h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; }
-.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
-.steps li { display: grid; gap: 4px; align-content: start; padding: 12px 14px; border-radius: 14px; background: var(--panel-2); border: 1px solid var(--line); }
-.steps b { font-size: 14px; }
-.steps span { font-size: 12px; color: var(--muted); }
-.privacy { font-size: 12px; color: var(--muted); }
-.ocr-head { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between; }
-.progress { height: 6px; border-radius: 999px; background: var(--panel); overflow: hidden; }
-.progress i { display: block; height: 100%; width: 0; background: var(--gold); transition: width .2s; }
-.ocr-chips { display: grid; gap: 6px; }
-.chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.nchip { display: inline-flex; align-items: baseline; gap: 6px; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); font-size: 12px; color: var(--fg); }
-.nchip:hover { border-color: color-mix(in srgb, var(--gold) 55%, var(--line)); }
-.nchip b { font-family: var(--font-num); font-size: 14px; font-weight: 800; }
-.nchip span { color: var(--muted); max-width: 10em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tgl-row { display: flex; flex-wrap: wrap; gap: 8px; }
-.tgl { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel); font-size: 14px; cursor: pointer; }
-.tgl input { width: 18px; height: 18px; margin: 0; accent-color: var(--gold); }
-.tbl.hide-x .c-x, .tbl.hide-threads .c-threads, .tbl.hide-note .c-note, .tbl.hide-posts .c-posts { display: none; }
-.tbl.hide-x, .tbl.hide-threads { min-width: 560px; }
-.sum-head .img-btn { padding: 6px 12px; font-size: 12px; }
 .img-body { display: grid; gap: 12px; }
 #img-preview { display: block; width: 100%; max-width: 420px; max-height: 62vh; object-fit: contain; margin-inline: auto; border-radius: 14px; border: 1px solid var(--line); background: var(--panel-2); }
-#data .tool-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); }
-.wipe-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px 12px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+.toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); z-index: 60; transform: translateX(-50%); padding: 10px 18px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-weight: 700; font-size: 14px; box-shadow: var(--shadow); white-space: nowrap; }
+@media (prefers-reduced-motion: no-preference) {
+  .stamp.on.fresh { animation: stamp-in 0.5s ease-out both; }
+}
+@keyframes stamp-in { from { transform: scale(1.35) rotate(-12deg); opacity: 0; } to { transform: none; opacity: 1; } }
 </style>
 </head>
 <body>
-<noscript><p style="padding:16px;color:#fff">このアプリを使うには JavaScript を有効にしてください。</p></noscript>
+<noscript><p style="padding:16px">このアプリを使うには JavaScript を有効にしてください。</p></noscript>
 <div class="app" id="app">
-  <header class="hero" id="top">
-    <svg class="sky" viewBox="0 0 1200 300" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
-      <defs>
-        <linearGradient id="skyg" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" style="stop-color: var(--sky1)"></stop>
-          <stop offset=".62" style="stop-color: var(--sky2)"></stop>
-          <stop offset="1" style="stop-color: var(--sky3)"></stop>
-        </linearGradient>
-        <radialGradient id="glowg" cx=".72" cy=".86" r=".42">
-          <stop offset="0" style="stop-color: var(--glow); stop-opacity: .75"></stop>
-          <stop offset="1" style="stop-color: var(--glow); stop-opacity: 0"></stop>
-        </radialGradient>
-      </defs>
-      <rect width="1200" height="300" fill="url(#skyg)"></rect>
-      <rect width="1200" height="300" fill="url(#glowg)"></rect>
-      <g style="fill: var(--star)">
-        <circle class="star" cx="90" cy="38" r="1.4"></circle><circle class="star" cx="210" cy="82" r="1"></circle>
-        <circle class="star" cx="330" cy="30" r="1.6"></circle><circle class="star" cx="455" cy="70" r="1"></circle>
-        <circle class="star" cx="560" cy="24" r="1.2"></circle><circle class="star" cx="640" cy="96" r="1"></circle>
-        <circle class="star" cx="760" cy="44" r="1.5"></circle><circle class="star" cx="1010" cy="34" r="1.3"></circle>
-        <circle class="star" cx="1120" cy="88" r="1"></circle><circle class="star" cx="1170" cy="22" r="1.4"></circle>
-        <circle class="star" cx="40" cy="120" r="1"></circle><circle class="star" cx="380" cy="128" r="1.1"></circle>
-      </g>
-      <circle class="orb" cx="700" cy="122" r="24" style="fill: var(--orb); opacity: .9"></circle>
-      <circle class="orb" cx="700" cy="122" r="44" style="fill: var(--orb); opacity: .12"></circle>
-      <path d="M0 214 L110 176 L215 198 L350 140 L470 184 L600 128 L720 170 L850 116 L980 166 L1090 140 L1200 168 L1200 300 L0 300 Z" style="fill: var(--mt1)"></path>
-      <path d="M0 246 L150 206 L270 232 L410 192 L545 228 L690 196 L830 234 L965 202 L1100 226 L1200 210 L1200 300 L0 300 Z" style="fill: var(--mt2)"></path>
-      <path d="M0 278 Q200 252 390 270 T780 266 T1200 262 L1200 300 L0 300 Z" style="fill: var(--bg)"></path>
-    </svg>
+  <header class="paper ruled hero" id="top">
+    <span class="tape-a" aria-hidden="true"></span>
+    <span class="tape-b" aria-hidden="true"></span>
     <div class="hero-top">
-      <p class="hero-date">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"></rect><path d="M3 10h18M8 3v4M16 3v4"></path></svg>
-        最終記録 <b class="v" id="h-last">—</b>
-      </p>
-      <div class="themes" role="group" aria-label="テーマを切り替え">
-        <button class="theme" type="button" data-theme="dark" aria-pressed="true"><span class="sw dark"></span>ダーク</button>
-        <button class="theme" type="button" data-theme="warm" aria-pressed="false"><span class="sw warm"></span>ウォーム</button>
-        <button class="theme" type="button" data-theme="fresh" aria-pressed="false"><span class="sw fresh"></span>フレッシュ</button>
+      <p class="hero-date"><span id="h-today">—</span> のページ ・ 最後の記録 <b class="v" id="h-last">—</b></p>
+      <div class="themes" role="group" aria-label="色を切り替え">
+        <button class="theme" type="button" data-theme="notebook" aria-pressed="true"><span class="sw notebook" aria-hidden="true"></span>手帖</button>
+        <button class="theme" type="button" data-theme="mist" aria-pressed="false"><span class="sw mist" aria-hidden="true"></span>霧</button>
+        <button class="theme" type="button" data-theme="night" aria-pressed="false"><span class="sw night" aria-hidden="true"></span>夜</button>
       </div>
     </div>
-    <div class="hero-main">
-      <div>
-        <h1 class="title">SNS 記録帳
-          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.8l2.7 5.6 6.1.8-4.5 4.2 1.1 6.1L12 16.6l-5.4 2.9 1.1-6.1-4.5-4.2 6.1-.8z"></path></svg>
-        </h1>
-        <p class="lead">X・Threads・note の数字を記録して、伸びた日を見つけよう。</p>
-      </div>
-      <div class="hero-actions">
-        <button class="btn-ghost" type="button" id="open-shot">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="15" rx="3"></rect><circle cx="12" cy="12.5" r="3.5"></circle><path d="M8 5l1.5-2h5L16 5"></path></svg>
-          スクショで記録
-        </button>
-        <button class="btn-gold" type="button" id="open-entry">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
-          記録する
-        </button>
-      </div>
+    <h1 class="title">SNS 記録帳</h1>
+    <svg class="squiggle" viewBox="0 0 160 10" aria-hidden="true"><path d="M2 6c20-4 42-4 64-1s54 3 92-2" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"></path></svg>
+    <p class="lead">数字よりも、続けてきた日々を見る手帖。</p>
+    <div class="hero-actions">
+      <button class="btn-soft" type="button" id="open-shot">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="15" rx="4"></rect><circle cx="12" cy="12.5" r="3.5"></circle></svg>
+        スクショで記録
+      </button>
+      <button class="btn-main" type="button" id="open-entry">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4l10-10-4-4L4 16v4z"></path></svg>
+        今日のページを書く
+      </button>
     </div>
   </header>
 
-  <main class="main">
-    <p class="banner" id="banner" role="status" hidden></p>
+  <p class="banner" id="banner" role="status" hidden></p>
 
-    <section class="card welcome" id="welcome" aria-labelledby="w-title" hidden>
-      <div>
-        <h2 id="w-title">はじめに</h2>
-        <p class="sub">X・Threads・note の数字を、毎日ひとこまずつ残していく記録帳です。</p>
+  <section class="paper welcome" id="welcome" aria-labelledby="w-title" hidden>
+    <span class="tape t1" aria-hidden="true">はじめに</span>
+    <div>
+      <h2 id="w-title">ようこそ、SNS 記録帳へ</h2>
+      <p class="sub">X・Threads・note の数字を、一日一ページずつ残していく手帖です。</p>
+    </div>
+    <ol class="steps">
+      <li><b>1. 数字を書きとめる</b><span>「今日のページを書く」から、その日のフォロワーや届いた数を入れます。使わない SNS は「設定とデータ」で外せます。</span></li>
+      <li><b>2. スクショから読み取る</b><span>アナリティクス画面のスクショを選ぶと、数字を読み取って欄に入れます。読み取りはこの端末の中で行います。</span></li>
+      <li><b>3. ホーム画面に置く</b><span>ホーム画面に追加すると、アプリのように開けます。記録はときどき書き出して保管してください。</span></li>
+    </ol>
+    <div class="row">
+      <button type="button" class="btn-main sm" id="w-start">最初のページを書く</button>
+      <button type="button" class="btn" id="w-sample">サンプルで見てみる</button>
+    </div>
+    <p class="privacy">記録はこのブラウザの中だけに保存されます。どこかに送られたり、ほかの人に見られたりすることはありません。</p>
+  </section>
+
+  <div class="notice hl" id="sample-bar" role="status" hidden>
+    <p>サンプルのページを表示しています（あなたの記録ではありません）。</p>
+    <button type="button" class="btn-main sm" id="sample-start">自分のページを書く</button>
+    <button type="button" class="btn" id="sample-exit">サンプルを閉じる</button>
+  </div>
+
+  <div class="notice hl" id="backup-notice" role="status" hidden>
+    <p>記録はこのブラウザの中にしかありません。端末の故障やブラウザのデータ削除に備えて、ときどき書き出しておきましょう。</p>
+    <button type="button" class="btn-main sm" id="backup-now">今すぐ書き出す</button>
+  </div>
+
+  <div class="notice" id="install-tip" hidden>
+    <p>iPhone では、共有ボタンから「ホーム画面に追加」すると、アプリのように開けます。Safari のまま使うと、しばらく開かなかったときに記録が消えることがあるので、ホーム画面からの利用がおすすめです。<br>ホーム画面のアプリと Safari では記録が別々に保存されます。Safari で入れた記録は「書き出す」→ アプリで「取り込む」で移せます。</p>
+    <button type="button" class="btn" id="install-close">閉じる</button>
+  </div>
+
+  <section class="paper summary" id="summary" aria-labelledby="sum-title">
+    <span class="tape" id="sum-title">今週のページ</span>
+    <div class="sum-head">
+      <p class="sum-range" id="sum-range">記録を読み込んでいます…</p>
+      <div class="seg" id="win-seg" role="group" aria-label="集計する期間">
+        <button type="button" data-win="7" aria-pressed="true">7日</button>
+        <button type="button" data-win="30" aria-pressed="false">30日</button>
       </div>
-      <ol class="steps">
-        <li><b>1. 数字を入れる</b><span>「記録する」から、その日のフォロワーやインプレッションを入れます。使わない SNS は「設定とデータ」で外せます。</span></li>
-        <li><b>2. スクショから読み取る</b><span>アナリティクス画面のスクショを選ぶと、数字を読み取って欄に入れます。読み取りはこの端末の中で行います。</span></li>
-        <li><b>3. ホーム画面に置く</b><span>ホーム画面に追加すると、アプリのように開けます。記録はときどき書き出して保管してください。</span></li>
-      </ol>
-      <div class="row">
-        <button type="button" class="btn-gold sm" id="w-start">最初の記録をつける</button>
-        <button type="button" class="btn" id="w-sample">サンプルで見てみる</button>
+    </div>
+    <div class="stats">
+      <div class="stat">
+        <span class="lbl">つながっている人</span>
+        <span class="big"><b id="s-fol">—</b><small>人</small></span>
+        <span class="sub">前回から <b class="v" id="s-fol-chg">—</b></span>
       </div>
-      <p class="privacy">記録はこのブラウザの中だけに保存されます。どこかに送られたり、ほかの人に見られたりすることはありません。</p>
-    </section>
-
-    <div class="notice gold" id="sample-bar" role="status" hidden>
-      <p>サンプルの記録を表示しています（あなたの記録ではありません）。</p>
-      <button type="button" class="btn-gold sm" id="sample-start">自分の記録をつける</button>
-      <button type="button" class="btn" id="sample-exit">サンプルを閉じる</button>
-    </div>
-
-    <div class="notice gold" id="backup-notice" role="status" hidden>
-      <p>記録はこのブラウザの中にしかありません。端末の故障やブラウザのデータ削除に備えて、ときどき書き出しておきましょう。</p>
-      <button type="button" class="btn-gold sm" id="backup-now">今すぐ書き出す</button>
-    </div>
-
-    <div class="notice" id="install-tip" hidden>
-      <p>iPhone では、共有ボタンから「ホーム画面に追加」すると、アプリのように開けます。Safari のまま使うと、しばらく開かなかったときに記録が消えることがあるので、ホーム画面からの利用がおすすめです。<br>ホーム画面のアプリと Safari では記録が別々に保存されます。Safari で入れた記録は「書き出す」→ アプリで「取り込む」で移せます。</p>
-      <button type="button" class="btn" id="install-close">閉じる</button>
-    </div>
-
-    <section class="card summary" id="summary" aria-labelledby="sum-title">
-      <div class="sum-head">
-        <span class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="5"></circle><circle cx="12" cy="12" r="1.4" fill="currentColor"></circle></svg></span>
-        <div>
-          <h2 id="sum-title">サマリー</h2>
-          <p class="sub" id="sum-range">記録を読み込んでいます…</p>
-        </div>
-        <div class="seg" id="win-seg" role="group" aria-label="集計期間">
-          <button type="button" data-win="7" aria-pressed="true">7日</button>
-          <button type="button" data-win="30" aria-pressed="false">30日</button>
-        </div>
-        <button type="button" class="btn img-btn" id="open-image" hidden>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 19h14"></path></svg>
-          画像で保存
-        </button>
+      <div class="stat">
+        <span class="lbl">届いた数</span>
+        <span class="big"><b id="s-imp">—</b></span>
+        <span class="sub">それぞれの場所の合計</span>
       </div>
-      <div class="stats">
-        <div class="stat s-fol">
-          <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5M16 4.8a3.4 3.4 0 010 6.4M18 14.8c1.9.7 3 2.4 3.5 5.2"></path></svg></span>
-          <div><p class="lbl">フォロワー合計</p><p class="big"><b id="s-fol">—</b><small>人</small></p><p class="sub">前回比 <b class="v" id="s-fol-chg">—</b></p></div>
-        </div>
-        <div class="stat s-imp">
-          <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"></path><circle cx="12" cy="12" r="3"></circle></svg></span>
-          <div><p class="lbl">インプレッション</p><p class="big"><b id="s-imp">—</b></p><p class="sub">3媒体の合計</p></div>
-        </div>
-        <div class="stat s-pv">
-          <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 4.5h6.5a2.5 2.5 0 012.5 2.5v13a2 2 0 00-2-2H4zM20 4.5h-4.5A2.5 2.5 0 0013 7v13a2 2 0 012-2h5z"></path></svg></span>
-          <div><p class="lbl">note PV</p><p class="big"><b id="s-pv">—</b></p><p class="sub">閲覧率 <b class="v" id="s-ctr">—</b></p></div>
-        </div>
-        <div class="stat s-post">
-          <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4l10.5-10.5a2.1 2.1 0 00-3-3L5 17v3zM13.5 7.5l3 3"></path></svg></span>
-          <div><p class="lbl">投稿数</p><p class="big"><b id="s-posts">—</b><small>本</small></p><p class="sub">X <b class="v" id="s-xposts">—</b> ・ Threads <b class="v" id="s-tposts">—</b></p></div>
-        </div>
+      <div class="stat">
+        <span class="lbl">読まれた数（note）</span>
+        <span class="big"><b id="s-pv">—</b></span>
+        <span class="sub">開いてくれた割合 <b class="v" id="s-ctr">—</b></span>
       </div>
-    </section>
-
-    <div class="sec-head" id="media">
-      <h2><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21c0-6 1.5-9.5 7.5-12-1 6.5-3.5 9-7.5 9.5zM11 20.5C10.6 15.5 8 12.6 3.5 11.5 4 16.5 6.6 19.6 11 20.5z"></path></svg>メディア別</h2>
-      <p>フォロワーは最新の記録、ほかは選んだ期間の合計です。</p>
+      <div class="stat">
+        <span class="lbl">書いた数</span>
+        <span class="big"><b id="s-posts">—</b><small>本</small></span>
+        <span class="sub">X <b class="v" id="s-xposts">—</b> ・ Threads <b class="v" id="s-tposts">—</b></span>
+      </div>
     </div>
-
-    <div class="pfs">
-      <article class="pf pf-x" data-p="x" id="card-x">
-        <div class="pf-head">
-          <span class="badge" aria-hidden="true">X</span>
-          <div><h3>X</h3><p>フォロワー <b class="v" data-f="fol-date">—</b> 時点</p></div>
-          <span class="pf-alert" data-f="alert" hidden>要再設定</span>
-          <span class="tag" data-f="win">7日間</span>
-        </div>
-        <div class="pf-main">
-          <div><p class="lbl">フォロワー</p><p class="big"><b data-f="fol">—</b><small>人</small></p></div>
-          <span class="chip">前回比 <b class="v" data-f="fol-chg">—</b></span>
-        </div>
-        <p class="since">記録開始（<b class="v" data-f="first-date">—</b>）から <b class="v" data-f="since">—</b> 人</p>
-        <div class="pf-stats">
-          <div><p class="lbl">インプレッション</p><p class="mid" data-f="imp">—</p></div>
-          <div><p class="lbl">投稿</p><p class="mid"><span data-f="posts">—</span><small>本</small></p></div>
-          <div><p class="lbl">1投稿あたり</p><p class="mid" data-f="per">—</p></div>
-        </div>
-        <div class="spark" data-spark="x" data-metric="impressions"></div>
-        <p class="cap">日別インプレッション（直近14日）</p>
-      </article>
-
-      <article class="pf pf-threads" data-p="threads" id="card-threads">
-        <div class="pf-head">
-          <span class="badge" aria-hidden="true">Th</span>
-          <div><h3>Threads</h3><p>フォロワー <b class="v" data-f="fol-date">—</b> 時点</p></div>
-          <span class="pf-alert" data-f="alert" hidden>要再設定</span>
-          <span class="tag" data-f="win">7日間</span>
-        </div>
-        <div class="pf-main">
-          <div><p class="lbl">フォロワー</p><p class="big"><b data-f="fol">—</b><small>人</small></p></div>
-          <span class="chip">前回比 <b class="v" data-f="fol-chg">—</b></span>
-        </div>
-        <p class="since">記録開始（<b class="v" data-f="first-date">—</b>）から <b class="v" data-f="since">—</b> 人</p>
-        <div class="pf-stats">
-          <div><p class="lbl">インプレッション</p><p class="mid" data-f="imp">—</p></div>
-          <div><p class="lbl">投稿</p><p class="mid"><span data-f="posts">—</span><small>本</small></p></div>
-          <div><p class="lbl">反応数 / 日</p><p class="mid" data-f="eng">—</p></div>
-        </div>
-        <div class="spark" data-spark="threads" data-metric="impressions"></div>
-        <p class="cap">日別インプレッション（直近14日）</p>
-      </article>
-
-      <article class="pf pf-note" data-p="note" id="card-note">
-        <div class="pf-head">
-          <span class="badge" aria-hidden="true">n</span>
-          <div><h3>note</h3><p>全記事の合計</p></div>
-          <span class="tag" data-f="win">7日間</span>
-        </div>
-        <div class="pf-main">
-          <div><p class="lbl">PV</p><p class="big" data-f="pv">—</p></div>
-          <span class="chip" data-f="fol-chip" hidden>フォロワー <b class="v" data-f="fol">—</b> 人</span>
-        </div>
-        <p class="since">表示された <b class="v" data-f="imp">—</b> 回のうち、<b class="v" data-f="ctr">—</b> が記事を開きました</p>
-        <div class="pf-stats">
-          <div><p class="lbl">インプレッション</p><p class="mid" data-f="imp">—</p></div>
-          <div><p class="lbl">スキ</p><p class="mid" data-f="likes">—</p></div>
-          <div><p class="lbl">PV / 日</p><p class="mid" data-f="pvavg">—</p></div>
-        </div>
-        <div class="spark" data-spark="note" data-metric="pv"></div>
-        <p class="cap">日別 PV（直近14日）</p>
-      </article>
+    <div class="stamps-box">
+      <p class="stamps-title">この2週間のスタンプ</p>
+      <div class="stamps" id="stamps" role="img" aria-label="この2週間に記録した日"></div>
+      <p class="stamps-text">14日のうち <b id="stamps-n">—</b> ページを書きました。<br><span id="stamps-msg"></span></p>
     </div>
-
-    <div class="sec-head" id="trends">
-      <h2><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l5.5-5.5 4 4L21 7M15 7h6v6"></path></svg>推移</h2>
-      <p>日ごとの動きから、伸びた日を見つけましょう。</p>
+    <div class="sum-foot">
+      <button type="button" class="btn" id="open-image" hidden>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 19h14"></path></svg>
+        このページを画像で残す
+      </button>
     </div>
+  </section>
 
-    <section class="card" id="impressions">
+  <div class="sec-head" id="media">
+    <h2>それぞれの場所</h2>
+    <p>フォロワーはいちばん新しい記録、ほかは選んだ期間の合計です。</p>
+  </div>
+
+  <div class="pfs">
+    <article class="paper pf pf-x" data-p="x" id="card-x">
+      <span class="tape" aria-hidden="true">X</span>
+      <p class="pf-meta">フォロワーは <b class="v" data-f="fol-date">—</b> 時点 ・ <span data-f="win">7日間</span></p>
+      <div class="pf-top">
+        <div><p class="lbl">フォロワー</p><p class="big"><b data-f="fol">—</b><small>人</small></p></div>
+        <span class="chip">前回から <b class="v" data-f="fol-chg">—</b></span>
+      </div>
+      <p class="since">はじめた日（<b class="v" data-f="first-date">—</b>）から <b class="v" data-f="since">—</b> 人</p>
+      <div class="pf-stats">
+        <div><p class="lbl">届いた数</p><p class="mid" data-f="imp">—</p></div>
+        <div><p class="lbl">書いた数</p><p class="mid"><span data-f="posts">—</span><small>本</small></p></div>
+        <div><p class="lbl">1本あたり</p><p class="mid" data-f="per">—</p></div>
+      </div>
+      <div class="spark" data-spark="x" data-metric="impressions"></div>
+      <p class="cap">日ごとの届いた数（直近14日）</p>
+    </article>
+
+    <article class="paper pf pf-threads" data-p="threads" id="card-threads">
+      <span class="tape" aria-hidden="true">Threads</span>
+      <p class="pf-meta">フォロワーは <b class="v" data-f="fol-date">—</b> 時点 ・ <span data-f="win">7日間</span></p>
+      <div class="pf-top">
+        <div><p class="lbl">フォロワー</p><p class="big"><b data-f="fol">—</b><small>人</small></p></div>
+        <span class="chip">前回から <b class="v" data-f="fol-chg">—</b></span>
+      </div>
+      <p class="since">はじめた日（<b class="v" data-f="first-date">—</b>）から <b class="v" data-f="since">—</b> 人</p>
+      <div class="pf-stats">
+        <div><p class="lbl">見てもらえた数</p><p class="mid" data-f="imp">—</p></div>
+        <div><p class="lbl">書いた数</p><p class="mid"><span data-f="posts">—</span><small>本</small></p></div>
+        <div><p class="lbl">反応 / 日</p><p class="mid" data-f="eng">—</p></div>
+      </div>
+      <div class="spark" data-spark="threads" data-metric="impressions"></div>
+      <p class="cap">日ごとの見てもらえた数（直近14日）</p>
+    </article>
+
+    <article class="paper pf pf-note" data-p="note" id="card-note">
+      <span class="tape" aria-hidden="true">note</span>
+      <p class="pf-meta">全記事の合計 ・ <span data-f="win">7日間</span></p>
+      <div class="pf-top">
+        <div><p class="lbl">読まれた数</p><p class="big" data-f="pv">—</p></div>
+        <span class="chip" data-f="fol-chip" hidden>フォロワー <b class="v" data-f="fol">—</b> 人</span>
+      </div>
+      <p class="since">表示された <b class="v" data-f="imp">—</b> 回のうち、<b class="v" data-f="ctr">—</b> が記事を開いてくれました</p>
+      <div class="pf-stats">
+        <div><p class="lbl">表示された数</p><p class="mid" data-f="imp">—</p></div>
+        <div><p class="lbl">スキ</p><p class="mid" data-f="likes">—</p></div>
+        <div><p class="lbl">1日あたり</p><p class="mid" data-f="pvavg">—</p></div>
+      </div>
+      <div class="spark" data-spark="note" data-metric="pv"></div>
+      <p class="cap">日ごとの読まれた数（直近14日）</p>
+    </article>
+  </div>
+
+  <div class="sec-head" id="trends">
+    <h2>ふりかえり</h2>
+    <p>よく届いた日には、小さな印が付きます。</p>
+  </div>
+
+  <section class="paper card" id="impressions">
+    <div class="card-head">
+      <div><h2>届いた数のうつりかわり</h2><p>直近30日・記録のない日は空いています</p></div>
+      <div class="seg solid" id="media-seg" role="group" aria-label="場所">
+        <button type="button" data-media="x" aria-pressed="true">X</button>
+        <button type="button" data-media="threads" aria-pressed="false">Threads</button>
+        <button type="button" data-media="note" aria-pressed="false">note</button>
+      </div>
+    </div>
+    <div class="chart" id="imp-chart"></div>
+    <p class="best" id="imp-best"></p>
+    <p class="footnote" id="cap-note" hidden>※ とびぬけて多い日は、上を切って表示しています（棒をタップすると実際の数が見られます）。</p>
+  </section>
+
+  <div class="grid2">
+    <section class="paper card" id="followers">
       <div class="card-head">
-        <div><h2>インプレッションの推移</h2><p>直近30日・記録のない日は空いています</p></div>
-        <div class="seg" id="media-seg" role="group" aria-label="媒体">
-          <button type="button" data-media="x" aria-pressed="true">X</button>
-          <button type="button" data-media="threads" aria-pressed="false">Threads</button>
-          <button type="button" data-media="note" aria-pressed="false">note</button>
-        </div>
+        <div><h2>つながりのうつりかわり</h2><p>直近90日のフォロワー</p></div>
+        <div class="legend"><span data-legend="x"><i style="background: var(--x)"></i>X</span><span data-legend="threads"><i style="background: var(--threads)"></i>Threads</span><span data-legend="note"><i style="background: var(--note)"></i>note</span></div>
       </div>
-      <div class="chart" id="imp-chart"></div>
-      <p class="footnote" id="cap-note" hidden>※ 突出した日は上端で切って表示しています（棒をタップすると実数が見られます）。</p>
-      <p class="footnote">インプレッションは、その日に入れた数字です。X は投稿ごとの合計、Threads は閲覧数など、入れ方をそろえると比べやすくなります。</p>
+      <div class="chart short" id="fol-chart"></div>
     </section>
+    <section class="paper card" id="posts">
+      <div class="card-head">
+        <div><h2>書いた日々</h2><p>直近14日の投稿数</p></div>
+        <div class="legend"><span data-legend="x"><i style="background: var(--x)"></i>X</span><span data-legend="threads"><i style="background: var(--threads)"></i>Threads</span></div>
+      </div>
+      <div class="chart short" id="post-chart"></div>
+    </section>
+  </div>
 
-    <div class="grid2">
-      <section class="card" id="followers">
-        <div class="card-head">
-          <div><h2>フォロワーの推移</h2><p>直近90日の記録</p></div>
-          <div class="legend"><span data-legend="x"><i style="background: var(--x)"></i>X</span><span data-legend="threads"><i style="background: var(--threads)"></i>Threads</span><span data-legend="note"><i style="background: var(--note)"></i>note</span></div>
-        </div>
-        <div class="chart short" id="fol-chart"></div>
-      </section>
-      <section class="card" id="posts">
-        <div class="card-head">
-          <div><h2>毎日の投稿数</h2><p>直近14日</p></div>
-          <div class="legend"><span data-legend="x"><i style="background: var(--x)"></i>X</span><span data-legend="threads"><i style="background: var(--threads)"></i>Threads</span></div>
-        </div>
-        <div class="chart short" id="post-chart"></div>
-      </section>
+  <section class="paper card" id="records">
+    <div class="card-head">
+      <div><h2>これまでのページ</h2><p id="rec-help">空欄は「記録なし」です。</p></div>
+      <span class="count" id="rec-count">—</span>
     </div>
+    <div class="tbl-wrap">
+      <table class="tbl" id="rec-table">
+        <thead>
+          <tr>
+            <th scope="col">日付</th>
+            <th scope="col" class="c-x">X フォロワー</th>
+            <th scope="col" class="c-x">X 届いた数</th>
+            <th scope="col" class="c-threads">Threads フォロワー</th>
+            <th scope="col" class="c-threads">Threads 見てもらえた数</th>
+            <th scope="col" class="c-note">note 読まれた数</th>
+            <th scope="col" class="c-posts">書いた数</th>
+            <th scope="col">ひとこと</th>
+          </tr>
+        </thead>
+        <tbody id="rec-body"></tbody>
+      </table>
+    </div>
+  </section>
 
-    <section class="card" id="records">
-      <div class="card-head">
-        <div><h2>記録一覧</h2><p id="rec-help">空欄は「記録なし」です。</p></div>
-        <span class="count" id="rec-count">—</span>
+  <section class="paper card" id="data">
+    <div class="card-head">
+      <div><h2>設定とデータ</h2><p>記録はこのブラウザの中だけに保存されています。</p></div>
+    </div>
+    <div class="tool-grid">
+      <div class="tool">
+        <h3>使う SNS</h3>
+        <p>使わないものを外すと、カードや入力欄から消えます。書いた記録は消えません。</p>
+        <div class="tgl-row">
+          <label class="tgl"><input type="checkbox" id="use-x" data-p="x" checked>X</label>
+          <label class="tgl"><input type="checkbox" id="use-threads" data-p="threads" checked>Threads</label>
+          <label class="tgl"><input type="checkbox" id="use-note" data-p="note" checked>note</label>
+        </div>
+        <p class="msg" id="tgl-msg" role="status"></p>
       </div>
-      <div class="tbl-wrap">
-        <table class="tbl" id="rec-table">
-          <thead>
-            <tr>
-              <th scope="col">日付</th>
-              <th scope="col" class="c-x">X フォロワー</th>
-              <th scope="col" class="c-x">X インプ</th>
-              <th scope="col" class="c-threads">Threads フォロワー</th>
-              <th scope="col" class="c-threads">Threads 閲覧</th>
-              <th scope="col" class="c-note">note PV</th>
-              <th scope="col" class="c-posts">投稿数</th>
-              <th scope="col">メモ</th>
-            </tr>
-          </thead>
-          <tbody id="rec-body"></tbody>
-        </table>
+      <div class="tool">
+        <h3>書き出す（バックアップ）</h3>
+        <p>すべての記録をファイルに保存します。JSON は、別の端末やブラウザで取り込み直せます。</p>
+        <div class="row">
+          <button type="button" class="btn" id="exp-json">JSON で書き出す</button>
+          <button type="button" class="btn" id="exp-csv">CSV で書き出す</button>
+        </div>
+        <p class="hint" id="backup-last"></p>
+        <p class="msg" id="exp-msg" role="status"></p>
       </div>
-    </section>
+      <div class="tool">
+        <h3>取り込む</h3>
+        <p>書き出した JSON か CSV を読み込みます。同じ日付の記録は上書きされます。</p>
+        <div class="row"><label class="btn file">ファイルを選ぶ<input type="file" id="imp-file" accept=".json,.csv,application/json,text/csv"></label></div>
+        <p class="msg" id="imp-msg" role="status"></p>
+        <div class="row" id="imp-actions" hidden>
+          <button type="button" class="btn-main sm" id="imp-go">取り込む</button>
+          <button type="button" class="btn" id="imp-cancel">やめる</button>
+        </div>
+      </div>
+      <div class="tool">
+        <h3>アプリとして使う</h3>
+        <p>ホーム画面に追加すると、アプリのように開けて、通信がなくても記録を見られます。</p>
+        <div class="row">
+          <button type="button" class="btn-main sm" id="install-btn" hidden>ホーム画面に追加</button>
+        </div>
+        <p class="hint">iPhone は Safari の共有ボタン →「ホーム画面に追加」、Android は Chrome のメニュー →「ホーム画面に追加」です。</p>
+      </div>
+    </div>
+    <div class="wipe-row">
+      <p class="hint">記録をすべて消すときは、先に書き出しておくと安心です。</p>
+      <button type="button" class="btn danger" id="wipe">すべての記録を消す</button>
+    </div>
+  </section>
 
-    <section class="card" id="data">
-      <div class="card-head">
-        <div><h2>設定とデータ</h2><p>記録はこのブラウザの中だけに保存されています。</p></div>
-      </div>
-      <div class="tool-grid">
-        <div class="tool">
-          <h3>使う SNS</h3>
-          <p>使わないものを外すと、カードや入力欄から消えます。入れた記録は消えません。</p>
-          <div class="tgl-row">
-            <label class="tgl"><input type="checkbox" id="use-x" data-p="x" checked>X</label>
-            <label class="tgl"><input type="checkbox" id="use-threads" data-p="threads" checked>Threads</label>
-            <label class="tgl"><input type="checkbox" id="use-note" data-p="note" checked>note</label>
-          </div>
-          <p class="msg" id="tgl-msg" role="status"></p>
-        </div>
-        <div class="tool">
-          <h3>書き出す（バックアップ）</h3>
-          <p>すべての記録をファイルに保存します。JSON は、別の端末やブラウザで取り込み直せます。</p>
-          <div class="row">
-            <button type="button" class="btn" id="exp-json">JSON で書き出す</button>
-            <button type="button" class="btn" id="exp-csv">CSV で書き出す</button>
-          </div>
-          <p class="hint" id="backup-last"></p>
-          <p class="msg" id="exp-msg" role="status"></p>
-        </div>
-        <div class="tool">
-          <h3>取り込む</h3>
-          <p>書き出した JSON か CSV を読み込みます。同じ日付の記録は上書きされます。</p>
-          <div class="row"><label class="btn file">ファイルを選ぶ<input type="file" id="imp-file" accept=".json,.csv,application/json,text/csv"></label></div>
-          <p class="msg" id="imp-msg" role="status"></p>
-          <div class="row" id="imp-actions" hidden>
-            <button type="button" class="btn-gold sm" id="imp-go">取り込む</button>
-            <button type="button" class="btn" id="imp-cancel">やめる</button>
-          </div>
-        </div>
-        <div class="tool">
-          <h3>アプリとして使う</h3>
-          <p>ホーム画面に追加すると、アプリのように開けて、通信がなくても記録を見られます。</p>
-          <div class="row">
-            <button type="button" class="btn-gold sm" id="install-btn" hidden>ホーム画面に追加</button>
-          </div>
-          <p class="hint">iPhone は Safari の共有ボタン →「ホーム画面に追加」、Android は Chrome のメニュー →「ホーム画面に追加」です。</p>
-        </div>
-      </div>
-      <div class="wipe-row">
-        <p class="hint">記録をすべて消すときは、先に書き出しておくと安心です。</p>
-        <button type="button" class="btn danger" id="wipe">すべての記録を消す</button>
-      </div>
-    </section>
-
-    <footer class="quote">
-      <svg viewBox="0 0 1200 140" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
-        <defs>
-          <linearGradient id="skyq" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" style="stop-color: var(--sky2)"></stop>
-            <stop offset="1" style="stop-color: var(--sky3)"></stop>
-          </linearGradient>
-        </defs>
-        <rect width="1200" height="140" fill="url(#skyq)"></rect>
-        <path d="M0 110 L140 84 L270 102 L420 70 L560 98 L700 76 L860 104 L1000 80 L1200 100 L1200 140 L0 140 Z" style="fill: var(--mt1)"></path>
-        <path d="M0 128 Q260 108 520 124 T1200 118 L1200 140 L0 140 Z" style="fill: var(--mt2)"></path>
-      </svg>
-      <p><span aria-hidden="true">“</span>数字は、続けてきた日々の足あと。</p>
-      <span class="sign">small steps, steady light.</span>
-    </footer>
-  </main>
+  <footer class="quote">
+    <p>書いた日も、書けなかった日も、<br>ちゃんとあなたの手帖の一部。</p>
+    <small>記録はこの端末の中だけに保存されます。</small>
+  </footer>
 </div>
 
 <div class="overlay" id="sheet" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
     <div class="sheet-head">
-      <h2 id="sheet-title">記録する</h2>
+      <h2 id="sheet-title">今日のページ</h2>
       <button type="button" class="icon-btn" id="sheet-close" aria-label="閉じる"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
     </div>
     <form class="entry" id="entry" novalidate>
@@ -705,7 +603,7 @@ button { cursor: pointer; }
       <div class="shot" id="shot-box">
         <div class="ocr-head">
           <p class="shot-title">スクショから読み取る</p>
-          <div class="seg" id="ocr-media" role="group" aria-label="スクショの SNS">
+          <div class="seg solid" id="ocr-media" role="group" aria-label="スクショの SNS">
             <button type="button" data-m="auto" aria-pressed="true">自動</button>
             <button type="button" data-m="x" aria-pressed="false">X</button>
             <button type="button" data-m="threads" aria-pressed="false">Threads</button>
@@ -727,12 +625,12 @@ button { cursor: pointer; }
         </div>
       </div>
 
-      <fieldset class="pset ps-x" data-p="x"><legend><span class="badge sm" style="--c: var(--x)" aria-hidden="true">X</span>X</legend><div class="fgrid" data-fields="x"></div></fieldset>
-      <fieldset class="pset ps-threads" data-p="threads"><legend><span class="badge sm" style="--c: var(--threads)" aria-hidden="true">Th</span>Threads</legend><div class="fgrid" data-fields="threads"></div></fieldset>
-      <fieldset class="pset ps-note" data-p="note"><legend><span class="badge sm" style="--c: var(--note)" aria-hidden="true">n</span>note</legend><div class="fgrid" data-fields="note"></div></fieldset>
+      <fieldset class="pset ps-x" data-p="x"><legend>X</legend><div class="fgrid" data-fields="x"></div></fieldset>
+      <fieldset class="pset ps-threads" data-p="threads"><legend>Threads</legend><div class="fgrid" data-fields="threads"></div></fieldset>
+      <fieldset class="pset ps-note" data-p="note"><legend>note</legend><div class="fgrid" data-fields="note"></div></fieldset>
 
       <div class="field">
-        <label for="f-memo">ひとこと（今の状況・気づきなど）</label>
+        <label for="f-memo">ひとこと（今日の気持ち、気づいたことなど）</label>
         <textarea id="f-memo" maxlength="140" rows="2"></textarea>
         <span class="memo-count" id="memo-count">0 / 140</span>
       </div>
@@ -741,7 +639,7 @@ button { cursor: pointer; }
         <button type="button" class="btn danger" id="f-delete" hidden>削除</button>
         <span class="spacer"></span>
         <button type="button" class="btn" id="f-cancel">キャンセル</button>
-        <button type="submit" class="btn-gold" id="f-save">保存する</button>
+        <button type="submit" class="btn-main" id="f-save">保存する</button>
         <p class="form-err" id="form-err" role="alert"></p>
       </div>
     </form>
@@ -751,16 +649,16 @@ button { cursor: pointer; }
 <div class="overlay" id="img-sheet" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="img-title">
     <div class="sheet-head">
-      <h2 id="img-title">画像で保存</h2>
+      <h2 id="img-title">このページを画像で残す</h2>
       <button type="button" class="icon-btn" id="img-close" aria-label="閉じる"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
     </div>
     <div class="img-body">
-      <img id="img-preview" alt="ダッシュボードのまとめ画像" hidden>
+      <img id="img-preview" alt="今週のページのまとめ画像" hidden>
       <p class="hint" id="img-msg" role="status"></p>
       <div class="sheet-foot">
         <span class="spacer"></span>
         <button type="button" class="btn" id="img-cancel">閉じる</button>
-        <button type="button" class="btn-gold" id="img-save" disabled>保存する</button>
+        <button type="button" class="btn-main" id="img-save" disabled>保存する</button>
       </div>
     </div>
   </div>

@@ -1,6 +1,6 @@
 # SNS 記録帳
 
-X・Threads・note のフォロワーやインプレッションを毎日記録して、グラフで見返せる Web アプリです。
+X・Threads・note のフォロワーやインプレッションを、手帖のように一日ずつ残していく Web アプリです。数字の大小よりも「続けてきた日々」が目に入るようにつくっています。
 
 **https://flawy0025.github.io/sns-kirokucho/**
 
@@ -10,6 +10,8 @@ X・Threads・note のフォロワーやインプレッションを毎日記録�
 - 7日・30日のサマリー、媒体ごとのカード、推移のグラフで見返す
 - アナリティクス画面のスクショから数字を読み取って、入力欄に入れる
 - 使わない SNS を外す
+- この2週間に書いた日をスタンプで見る
+- 色を「手帖」「霧」「夜」の3つから選ぶ（選んだ色は保存した画像にも反映されます）
 - ダッシュボードのまとめを画像（1080×1350）で保存する
 - 記録を JSON・CSV で書き出す / 取り込む
 - ホーム画面に追加して、アプリのように使う（通信がなくても開けます）
@@ -43,4 +45,4 @@ X・Threads・note のフォロワーやインプレッションを毎日記録�
 
 - [D3.js](https://d3js.org/) v7.8.5（ISC License）— `vendor/d3.LICENSE.txt`
 - [Tesseract.js](https://github.com/naptha/tesseract.js) v5.1.1（Apache License 2.0）— 使うときに jsDelivr から読み込み
-- フォント：Zen Maru Gothic、Noto Sans JP、Manrope（Google Fonts、SIL Open Font License）
+- フォント：Kiwi Maru、Noto Sans JP、Quicksand（Google Fonts、SIL Open Font License）

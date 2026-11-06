@@ -179,7 +179,7 @@
     $$('#win-seg button').forEach((b) => b.setAttribute('aria-pressed', String(Number(b.dataset.win) === S.win)));
     $$('[data-f="win"]').forEach((el) => { el.textContent = `${S.win}日間`; });
     if (!S.loaded) return;
-    setText($('#sum-range'), st ? `${md(st.start)} 〜 ${md(st.end)} の${S.win}日間` : 'まだ記録がありません。「記録する」から最初の1日を入れてみましょう。');
+    setText($('#sum-range'), st ? `${md(st.start)} 〜 ${md(st.end)} の${S.win}日間` : 'まだページがありません。「今日のページを書く」から始められます。');
 
     const fol = {};
     PLATS.forEach((p) => { fol[p] = on(p) ? followerInfo(p) : null; });
@@ -275,6 +275,7 @@
   function drawImp(el) {
     if (!on(S.media)) S.media = PLATS.find(on) || 'x';
     const p = S.media;
+    setText($('#imp-best'), '');
     if (!S.anchor) { emptyMsg(el, 'まだ記録がありません'); $('#cap-note').hidden = true; return; }
     const days = dayRange(addDays(S.anchor, -29), S.anchor);
     const rows = days.map((d) => { const r = S.byDate.get(d); return { day: d, v: val(r, p, 'impressions'), posts: val(r, p, 'posts'), pv: val(r, 'note', 'pv') }; });
@@ -285,7 +286,7 @@
     const p75 = d3.quantile(sorted, 0.75) || 0;
     const max = sorted[sorted.length - 1] || 1;
     const capped = have.length >= 5 && p75 > 0 && max > p75 * 4;
-    const y = d3.scaleLinear([0, capped ? p75 * 2.4 : max], [h - 28, 12]).nice(4);
+    const y = d3.scaleLinear([0, capped ? p75 * 2.4 : max], [h - 28, 34]).nice(4);
     const top = y.domain()[1];
     const ticks = y.ticks(4).filter(Number.isInteger);
     const ml = measure(svg, ticks.map(fmtInt), 'tick') + 10;
@@ -295,9 +296,17 @@
     const bw = x.bandwidth();
     axes(svg, { y, ticks, ml, mr, w, h, labels: days, x, step: x.step(), center: bw / 2 });
     const vy = (r) => y(Math.min(r.v, top));
+    const best = have.reduce((a, r) => (r.v > a.v ? r : a), have[0]);
     const bars = svg.append('g').selectAll('rect').data(have).join('rect').attr('class', 'bar')
       .attr('x', (r) => x(r.day)).attr('width', bw).attr('y', vy).attr('height', (r) => Math.max(0, y(0) - vy(r)))
-      .attr('rx', Math.min(4, bw / 2)).style('fill', COLOR[p]);
+      .attr('rx', Math.min(5, bw / 2)).style('fill', (r) => (r === best ? COLOR[p] : `color-mix(in srgb, ${COLOR[p]} 40%, var(--panel))`));
+    if (best.v > 0) {
+      const tag = svg.append('g').attr('class', 'best-tag').attr('aria-hidden', 'true')
+        .attr('transform', `translate(${Math.max(26, Math.min(w - 26, x(best.day) + bw / 2))},${vy(best) - 16}) rotate(-4)`);
+      tag.append('rect').attr('x', -24).attr('y', -12).attr('width', 48).attr('height', 22).attr('rx', 4).style('fill', 'var(--hl)');
+      tag.append('text').attr('text-anchor', 'middle').attr('y', 4).attr('font-size', 11).attr('font-weight', 700).style('fill', 'var(--hl-ink)').text('いい日');
+      setText($('#imp-best'), `${md(best.day)} は、この30日でいちばん${p === 'note' ? '読まれた' : '届いた'}日でした。`);
+    }
     const over = have.filter((r) => r.v > top);
     svg.append('g').selectAll('path').data(over).join('path').attr('class', 'break')
       .attr('d', (r) => { const a = x(r.day) - 2; const b = x(r.day) + bw + 2; const yy = y(top) + 12; return `M${a},${yy + 3}L${b},${yy - 3}M${a},${yy + 8}L${b},${yy + 2}`; });
@@ -440,12 +449,12 @@
     const table = $('#rec-table');
     PLATS.forEach((p) => table.classList.toggle(`hide-${p}`, !on(p)));
     table.classList.toggle('hide-posts', !on('x') && !on('threads'));
-    setText($('#rec-count'), `${S.records.length}件`);
-    setText($('#rec-help'), S.sampleMode ? 'サンプルの記録です（編集はできません）。' : '行をタップすると編集できます。空欄は「記録なし」です。');
+    setText($('#rec-count'), `${S.records.length} ページ`);
+    setText($('#rec-help'), S.sampleMode ? 'サンプルのページです（直すことはできません）。' : '行をタップすると、そのページを直せます。空欄は「記録なし」です。');
     if (!S.records.length) {
       const tr = document.createElement('tr');
       const td = document.createElement('td');
-      td.colSpan = 8; td.className = 'msg'; td.textContent = 'まだ記録がありません。';
+      td.colSpan = 8; td.className = 'msg'; td.textContent = 'まだページがありません。最初のページは、いつでも書けます。';
       tr.append(td); body.replaceChildren(tr); return;
     }
     const lastFol = {};
@@ -509,9 +518,51 @@
     $$('#media-seg button').forEach((o) => o.setAttribute('aria-pressed', String(o.dataset.media === S.media)));
   }
 
+  /* ---------- two-week stamps ---------- */
+  const STAR = 'M12 4l2 5 5 .5-3.8 3.4 1.1 5.1L12 15.4 7.7 18l1.1-5.1L5 9.5 10 9z';
+  let stampsSeen = null;
+  const hasPage = (r) => !!r && (hasActivity(r) || PLATS.some((p) => val(r, p, 'followers') !== null) || (typeof r.memo === 'string' && r.memo.trim() !== ''));
+  function renderStamps() {
+    const box = $('#stamps');
+    if (!box || !S.loaded) return;
+    const end = today();
+    const days = dayRange(addDays(end, -13), end);
+    let n = 0;
+    const done = new Set();
+    box.replaceChildren(...days.map((d, i) => {
+      const on = hasPage(S.byDate.get(d));
+      if (on) { n += 1; done.add(d); }
+      const el = document.createElement('span');
+      el.className = `stamp${on ? ` on s${(i % 3) + 1}` : ''}${d === end ? ' today' : ''}${on && stampsSeen && !stampsSeen.has(d) ? ' fresh' : ''}`;
+      el.title = `${mdw(d)}${on ? '：書きました' : ''}`;
+      if (on) {
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('aria-hidden', 'true');
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', STAR);
+        svg.append(path); el.append(svg);
+      }
+      return el;
+    }));
+    stampsSeen = done;
+    box.setAttribute('aria-label', `この2週間のうち ${n}日 ページを書きました`);
+    setText($('#stamps-n'), `${n}日`);
+    setText($('#stamps-msg'), n === 0 ? '最初のページは、いつでも書けます。'
+      : n < 5 ? '空いた日も、あなたの大事な一日です。'
+      : n < 10 ? '少しずつ、確かに積み重なっています。'
+      : 'ここまで続けてきた自分を、ほめてあげてください。');
+  }
+
+  function renderToday() {
+    const t = new Date();
+    setText($('#h-today'), `${t.getMonth() + 1}月${t.getDate()}日（${WEEK[t.getDay()]}）`);
+  }
+
   function renderAll() {
+    renderToday();
     renderSettings();
     renderNotices();
+    renderStamps();
     renderNumbers();
     renderCharts();
     renderTable();
@@ -583,7 +634,7 @@
   function setMode(editingDate) {
     S.editing = editingDate;
     S.confirmDelete = false; S.confirmOverwrite = false;
-    setText($('#sheet-title'), editingDate ? `${mdw(editingDate)} の記録を編集` : '記録する');
+    setText($('#sheet-title'), editingDate ? `${mdw(editingDate)} のページを直す` : '今日のページ');
     $('#f-delete').hidden = !editingDate;
     setText($('#f-delete'), '削除');
     setText($('#f-save'), '保存する');
@@ -880,7 +931,7 @@
       renderChips(numbers);
       const kinds = [...new Set(found)].map((p) => NAMES[p]).join('・');
       if (filled.length) {
-        ocrStatus(`${filled.length}項目を入れました（金色の枠）：${filled.join('、')}。\n数字が合っているか確かめてから保存してください。`);
+        ocrStatus(`${filled.length}項目を入れました（色のついた枠）：${filled.join('、')}。\n数字が合っているか確かめてから保存してください。`);
       } else if (!found.length) {
         ocrStatus('どの SNS の画面か判定できませんでした。上で媒体を選んで「もう一度読み取る」を押すか、下の数字をタップして入れてください。', true);
       } else if (found.every((p) => !on(p))) {
@@ -977,66 +1028,59 @@
   async function drawDashboardImage() {
     const W = 1080; const H = 1350;
     const F = {
-      display: '"Zen Maru Gothic", "Hiragino Maru Gothic ProN", "Noto Sans JP", sans-serif',
+      display: '"Kiwi Maru", "Hiragino Mincho ProN", "Yu Mincho", "Noto Sans JP", serif',
       body: '"Noto Sans JP", "Hiragino Sans", "Yu Gothic", sans-serif',
-      num: '"Manrope", "Noto Sans JP", "Hiragino Sans", sans-serif',
+      num: '"Quicksand", "Noto Sans JP", "Hiragino Sans", sans-serif',
     };
     try {
       await Promise.race([
-        Promise.all(['700 72px "Zen Maru Gothic"', '800 52px "Manrope"', '500 26px "Noto Sans JP"', '700 30px "Noto Sans JP"']
+        Promise.all(['500 72px "Kiwi Maru"', '700 52px "Quicksand"', '500 26px "Noto Sans JP"', '700 30px "Noto Sans JP"']
           .map((f) => document.fonts.load(f, 'SNS記録帳フォロワー0123'))),
         new Promise((resolve) => setTimeout(resolve, 2500)),
       ]);
     } catch (e) { /* fonts are optional */ }
     const c = {};
-    ['bg', 'panel', 'panel-2', 'line', 'fg', 'muted', 'faint', 'gold', 'gold-ink', 'up', 'down', 'hero-fg', 'hero-muted', 'sky1', 'sky2', 'sky3', 'glow', 'mt1', 'mt2', 'star', 'orb', 'x', 'threads', 'note']
-      .forEach((k) => { c[k] = cssVar(`--${k}`, '#888'); });
+    ['bg', 'panel', 'panel-2', 'line', 'rule', 'edge', 'fg', 'muted', 'faint', 'accent', 'accent-ink', 'pos', 'down', 'dash',
+      'x', 'threads', 'note', 'tape1', 'tape2', 'tape3', 'tape-ink', 'stamp1', 'stamp2', 'stamp3', 'hl', 'hl-ink']
+      .forEach((k) => { c[k] = cssVar(`--${k}`, '#888888'); });
 
     const canvas = document.createElement('canvas');
     canvas.width = W; canvas.height = H;
     const ctx = canvas.getContext('2d');
     ctx.textBaseline = 'alphabetic';
     const text = (str, x, y, font, color, align) => { ctx.font = font; ctx.fillStyle = color; ctx.textAlign = align || 'left'; ctx.fillText(str, x, y); return ctx.measureText(str).width; };
+    const paper = (x, y, w, h, r) => {
+      ctx.fillStyle = c.edge; roundRect(ctx, x, y + 6, w, h, r); ctx.fill();
+      ctx.fillStyle = c.panel; roundRect(ctx, x, y, w, h, r); ctx.fill();
+    };
+    const ruled = (x, y, w, h, r, step) => {
+      ctx.save(); roundRect(ctx, x, y, w, h, r); ctx.clip();
+      ctx.fillStyle = c.rule;
+      for (let yy = y + step; yy < y + h; yy += step) ctx.fillRect(x, yy, w, 2);
+      ctx.restore();
+    };
+    const tape = (x, y, w, h, color, angle, label, labelColor, font) => {
+      ctx.save(); ctx.translate(x + w / 2, y + h / 2); ctx.rotate((angle * Math.PI) / 180);
+      ctx.globalAlpha = 0.95; ctx.fillStyle = color; ctx.fillRect(-w / 2, -h / 2, w, h); ctx.globalAlpha = 1;
+      if (label) text(label, 0, h * 0.2, font || `500 26px ${F.display}`, labelColor || c['tape-ink'], 'center');
+      ctx.restore();
+    };
 
-    // 背景と夜空
     ctx.fillStyle = c.bg; ctx.fillRect(0, 0, W, H);
-    const HH = 420;
-    const sky = ctx.createLinearGradient(0, 0, 0, HH);
-    sky.addColorStop(0, c.sky1); sky.addColorStop(0.62, c.sky2); sky.addColorStop(1, c.sky3);
-    ctx.fillStyle = sky; ctx.fillRect(0, 0, W, HH);
-    const glow = ctx.createRadialGradient(W * 0.72, HH * 0.86, 0, W * 0.72, HH * 0.86, W * 0.45);
-    glow.addColorStop(0, hexA(c.glow, 0.7)); glow.addColorStop(1, hexA(c.glow, 0));
-    ctx.fillStyle = glow; ctx.fillRect(0, 0, W, HH);
-    if (c.star && c.star !== 'transparent') {
-      ctx.fillStyle = c.star;
-      [[90, 50, 2.4], [210, 110, 1.6], [330, 40, 2.6], [470, 92, 1.6], [580, 34, 2], [760, 60, 2.4], [980, 46, 2], [1030, 120, 1.6], [40, 160, 1.6], [400, 170, 1.8]]
-        .forEach(([x, y, r]) => { ctx.globalAlpha = 0.75; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); });
-      ctx.globalAlpha = 1;
-    }
-    ctx.fillStyle = c.orb;
-    ctx.globalAlpha = 0.12; ctx.beginPath(); ctx.arc(880, 110, 64, 0, Math.PI * 2); ctx.fill();
-    ctx.globalAlpha = 0.9; ctx.beginPath(); ctx.arc(880, 110, 36, 0, Math.PI * 2); ctx.fill();
-    ctx.globalAlpha = 1;
-    ctx.save(); ctx.scale(W / 1200, HH / 300);
-    ctx.fillStyle = c.mt1; ctx.fill(new Path2D('M0 214 L110 176 L215 198 L350 140 L470 184 L600 128 L720 170 L850 116 L980 166 L1090 140 L1200 168 L1200 300 L0 300 Z'));
-    ctx.fillStyle = c.mt2; ctx.fill(new Path2D('M0 246 L150 206 L270 232 L410 192 L545 228 L690 196 L830 234 L965 202 L1100 226 L1200 210 L1200 300 L0 300 Z'));
-    ctx.fillStyle = c.bg; ctx.fill(new Path2D('M0 278 Q200 252 390 270 T780 266 T1200 262 L1200 300 L0 300 Z'));
-    ctx.restore();
 
-    // 見出し
-    const tw = text('SNS 記録帳', 64, 136, `700 76px ${F.display}`, c['hero-fg']);
-    ctx.strokeStyle = c.gold; ctx.lineWidth = 5; ctx.lineJoin = 'round';
-    starPath(ctx, 64 + tw + 44, 110, 26, 11); ctx.stroke();
+    // 見出しのページ
+    paper(48, 52, W - 96, 236, 26);
+    ruled(48, 52, W - 96, 236, 26, 48);
+    tape(110, 36, 150, 36, c.tape1, -4);
+    tape(860, 38, 110, 34, c.tape2, 5);
+    text('SNS 記録帳', 92, 166, `500 74px ${F.display}`, c.fg);
+    ctx.strokeStyle = c.stamp1; ctx.lineWidth = 6; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(94, 194); ctx.bezierCurveTo(180, 182, 260, 186, 330, 192); ctx.bezierCurveTo(390, 197, 440, 190, 470, 186); ctx.stroke();
     const st = windowStats();
-    text(st ? `${md(st.start)} 〜 ${md(st.end)} の${S.win}日間` : 'まだ記録がありません', 66, 196, `500 30px ${F.body}`, c['hero-muted']);
-    if (S.sampleMode) {
-      ctx.font = `700 26px ${F.body}`;
-      const sw = ctx.measureText('サンプル').width + 40;
-      ctx.fillStyle = c.gold; roundRect(ctx, W - 64 - sw, 40, sw, 48, 24); ctx.fill();
-      text('サンプル', W - 64 - sw / 2, 73, `700 26px ${F.body}`, c['gold-ink'], 'center');
-    }
+    text(st ? `${md(st.start)} 〜 ${md(st.end)} の${S.win}日間のページ` : 'まだページがありません', 94, 252, `500 30px ${F.body}`, c.muted);
+    if (S.sampleMode) tape(W - 250, 110, 150, 46, c.tape3, 3, 'サンプル', c['tape-ink'], `700 26px ${F.body}`);
 
-    // サマリー
+    // 今週のページ
     const g = (p, f) => (on(p) && st && st[p][f] ? st[p][f].s : null);
     const add = (...vs) => { const ok = vs.filter((v) => v !== null); return ok.length ? ok.reduce((a, v) => a + v, 0) : null; };
     const fol = {}; PLATS.forEach((p) => { fol[p] = on(p) ? followerInfo(p) : null; });
@@ -1044,67 +1088,92 @@
     const folTotal = folList.length ? folList.reduce((a, f) => a + f.value, 0) : null;
     const folChgList = folList.filter((f) => f.change !== null);
     const folChg = folChgList.length ? folChgList.reduce((a, f) => a + f.change, 0) : null;
-    const pv = g('note', 'pv'); const nimp = g('note', 'impressions');
+    const pv = g('note', 'pv');
     const stats = [
-      ['フォロワー合計', fmt(folTotal), '人', folChg === null ? '' : `前回比 ${signed(folChg)}`, folChg],
-      ['インプレッション', fmt(add(g('x', 'impressions'), g('threads', 'impressions'), g('note', 'impressions'))), '', '合計', null],
-      ['note PV', on('note') ? fmt(pv) : '—', '', on('note') && pv !== null && nimp ? `閲覧率 ${pct(pv / nimp)}` : '', null],
-      ['投稿数', fmt(add(g('x', 'posts'), g('threads', 'posts'))), '本', [on('x') ? `X ${fmt(g('x', 'posts'))}` : '', on('threads') ? `Threads ${fmt(g('threads', 'posts'))}` : ''].filter(Boolean).join('・'), null],
+      ['つながっている人', fmt(folTotal), '人', folChg === null ? '' : `前回から ${signed(folChg)}`, folChg],
+      ['届いた数', fmt(add(g('x', 'impressions'), g('threads', 'impressions'), g('note', 'impressions'))), '', '場所の合計', null],
+      ['読まれた数', on('note') ? fmt(pv) : '—', '', 'note', null],
+      ['書いた数', fmt(add(g('x', 'posts'), g('threads', 'posts'))), '本', [on('x') ? `X ${fmt(g('x', 'posts'))}` : '', on('threads') ? `Th ${fmt(g('threads', 'posts'))}` : ''].filter(Boolean).join('・'), null],
     ];
-    const sy = 316;
-    ctx.fillStyle = c.panel; roundRect(ctx, 48, sy, W - 96, 220, 30); ctx.fill();
-    ctx.strokeStyle = c.line; ctx.lineWidth = 2; ctx.stroke();
+    const sy = 322;
+    paper(48, sy, W - 96, 318, 26);
+    tape(80, sy - 16, 210, 40, c.tape3, -2, '今週のページ');
     stats.forEach(([label, value, unit, sub, sign], i) => {
-      const x = 84 + i * 240;
-      if (i) { ctx.fillStyle = c.line; ctx.fillRect(x - 22, sy + 40, 2, 140); }
-      text(label, x, sy + 66, `500 24px ${F.body}`, c.muted);
-      const vw = text(value, x, sy + 136, `800 54px ${F.num}`, c.fg);
-      if (unit && value !== '—') text(unit, x + vw + 6, sy + 136, `500 24px ${F.body}`, c.muted);
-      ctx.font = `500 22px ${F.body}`;
-      text(fitText(ctx, sub, 210), x, sy + 182, `500 22px ${F.body}`, sign > 0 ? c.up : sign < 0 ? c.down : c.muted);
+      const x = 76 + i * 236; const y = sy + 40; const w = 220; const h = 132;
+      ctx.strokeStyle = c.rule; ctx.lineWidth = 3; roundRect(ctx, x, y, w, h, 20); ctx.stroke();
+      text(label, x + 18, y + 38, `500 22px ${F.body}`, c.muted);
+      const vw = text(value, x + 18, y + 90, `700 46px ${F.num}`, c.fg);
+      if (unit && value !== '—') text(unit, x + 18 + vw + 6, y + 90, `500 22px ${F.body}`, c.muted);
+      ctx.font = `500 20px ${F.body}`;
+      text(fitText(ctx, sub, w - 30), x + 18, y + 120, `500 20px ${F.body}`, sign > 0 ? c.pos : c.muted);
     });
+    // スタンプ
+    const end = today();
+    const days14 = dayRange(addDays(end, -13), end);
+    let n = 0;
+    text('この2週間のスタンプ', 80, sy + 222, `500 26px ${F.display}`, c.fg);
+    days14.forEach((d, i) => {
+      const cx = 98 + i * 50; const cy = sy + 266; const r = 20;
+      const r0 = S.byDate.get(d);
+      const done = !!r0 && (hasActivity(r0) || PLATS.some((p) => val(r0, p, 'followers') !== null) || (typeof r0.memo === 'string' && r0.memo.trim() !== ''));
+      if (done) {
+        n += 1;
+        ctx.fillStyle = d === end ? c.accent : [c.stamp1, c.stamp2, c.stamp3][i % 3];
+        ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = c.panel; starPath(ctx, cx, cy + 1, 11, 5); ctx.fill();
+      } else {
+        ctx.strokeStyle = c.dash; ctx.lineWidth = 2.5; ctx.setLineDash([5, 5]);
+        ctx.beginPath(); ctx.arc(cx, cy, r - 1, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+      }
+    });
+    ctx.font = `700 40px ${F.num}`; const nw = ctx.measureText(`${n}日`).width;
+    ctx.font = `500 22px ${F.body}`; const kw = ctx.measureText('書きました').width;
+    const nx = W - 84 - kw - 8 - nw;
+    text('14日のうち', nx, sy + 252, `500 22px ${F.body}`, c.muted);
+    text(`${n}日`, nx, sy + 292, `700 40px ${F.num}`, c.pos);
+    text('書きました', nx + nw + 8, sy + 292, `500 22px ${F.body}`, c.muted);
 
-    // 媒体ごと
+    // それぞれの場所
     const plats = PLATS.filter(on);
-    const top = 572; const bottom = 1196; const gap = 22;
-    const rowH = Math.min(230, (bottom - top - gap * (plats.length - 1)) / Math.max(1, plats.length));
+    const top = 690; const bottom = 1196; const gap = 30;
+    const rowH = Math.min(220, (bottom - top - gap * (plats.length - 1)) / Math.max(1, plats.length));
     const days = S.anchor ? dayRange(addDays(S.anchor, -13), S.anchor) : [];
     plats.forEach((p, i) => {
       const y = top + i * (rowH + gap);
       const color = c[p];
-      ctx.fillStyle = c.panel; roundRect(ctx, 48, y, W - 96, rowH, 28); ctx.fill();
-      ctx.strokeStyle = hexA(color, 0.45); ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = color; roundRect(ctx, 80, y + 24, 52, 52, 15); ctx.fill();
-      text(p === 'x' ? 'X' : p === 'threads' ? 'Th' : 'n', 106, y + 59, `800 24px ${F.num}`, '#ffffff', 'center');
-      text(NAMES[p], 150, y + 61, `700 32px ${F.display}`, c.fg);
+      paper(48, y, W - 96, rowH, 24);
+      tape(76, y - 16, p === 'threads' ? 150 : 96, 38, hexA(color, 0.45), -2, NAMES[p], c.fg, `700 24px ${F.num}`);
       const f = fol[p];
-      text('フォロワー', 80, y + rowH - 80, `500 22px ${F.body}`, c.muted);
-      const fw = text(f ? fmt(f.value) : '—', 80, y + rowH - 36, `800 52px ${F.num}`, c.fg);
-      if (f && f.change !== null) text(signed(f.change), 80 + fw + 14, y + rowH - 38, `700 26px ${F.num}`, f.change > 0 ? c.up : f.change < 0 ? c.down : c.muted);
       const metric = p === 'note' ? 'pv' : 'impressions';
-      text(`${p === 'note' ? 'PV' : p === 'threads' ? '閲覧数' : 'インプレッション'}（${S.win}日間）`, 380, y + rowH - 80, `500 22px ${F.body}`, c.muted);
-      text(fmt(g(p, metric)), 380, y + rowH - 36, `800 44px ${F.num}`, c.fg);
-      // 直近14日の棒グラフ
-      const cx0 = 690; const cx1 = W - 84; const cy0 = y + 34; const cy1 = y + rowH - 50;
+      const firstLabel = p === 'note' ? '読まれた数' : 'フォロワー';
+      const firstValue = p === 'note' ? fmt(g(p, 'pv')) : (f ? fmt(f.value) : '—');
+      text(firstLabel, 84, y + rowH - 74, `500 22px ${F.body}`, c.muted);
+      const fw = text(firstValue, 84, y + rowH - 28, `700 48px ${F.num}`, c.fg);
+      if (p !== 'note' && f && f.change !== null) text(signed(f.change), 84 + fw + 14, y + rowH - 30, `700 26px ${F.num}`, f.change > 0 ? c.pos : c.muted);
+      const second = p === 'note' ? ['フォロワー', f ? fmt(f.value) : '—'] : [p === 'threads' ? '見てもらえた数' : '届いた数', fmt(g(p, metric))];
+      text(`${second[0]}${p === 'note' ? '' : `（${S.win}日間）`}`, 380, y + rowH - 74, `500 22px ${F.body}`, c.muted);
+      text(second[1], 380, y + rowH - 28, `700 40px ${F.num}`, c.fg);
+      // 直近14日
+      const cx0 = 690; const cx1 = W - 84; const cy0 = y + 40; const cy1 = y + rowH - 44;
       const vals = days.map((d) => val(S.byDate.get(d), p, metric));
-      const max = Math.max(1, ...vals.filter((v) => v !== null));
+      const real = vals.filter((v) => v !== null);
+      const max = Math.max(1, ...real);
+      const best = real.length ? Math.max(...real) : null;
       const step = (cx1 - cx0) / Math.max(1, days.length);
       const bw = Math.max(4, step * 0.62);
-      ctx.fillStyle = hexA(c.line, 1); ctx.fillRect(cx0, cy1, cx1 - cx0, 2);
+      ctx.fillStyle = c.line; ctx.fillRect(cx0, cy1, cx1 - cx0, 2);
       vals.forEach((v, k) => {
         if (v === null) return;
         const h = Math.max(3, ((cy1 - cy0) * v) / max);
-        ctx.fillStyle = k === vals.length - 1 ? color : hexA(color, 0.7);
-        roundRect(ctx, cx0 + k * step + (step - bw) / 2, cy1 - h, bw, h, Math.min(4, bw / 2)); ctx.fill();
+        ctx.fillStyle = v === best ? color : hexA(color, 0.38);
+        roundRect(ctx, cx0 + k * step + (step - bw) / 2, cy1 - h, bw, h, Math.min(6, bw / 2)); ctx.fill();
       });
-      text('直近14日', cx1, y + rowH - 18, `500 20px ${F.body}`, c.faint, 'right');
+      text('直近14日', cx1, y + rowH - 14, `500 19px ${F.body}`, c.faint, 'right');
     });
 
-    // 下
-    ctx.fillStyle = c.line; ctx.fillRect(64, 1232, W - 128, 2);
-    text('“ 数字は、続けてきた日々の足あと。', 64, 1286, `500 28px ${F.display}`, c.fg);
-    text('small steps, steady light.', W - 64, 1286, `italic 500 26px "Segoe Script", "Snell Roundhand", "Brush Script MT", cursive`, c.gold, 'right');
-    text(`SNS 記録帳 · ${location.host || 'sns-kirokucho'}${location.host ? location.pathname.replace(/index\.html$/, '') : ''}`, 64, 1324, `500 20px ${F.body}`, c.faint);
+    // ひとこと
+    text('書いた日も、書けなかった日も、ちゃんとあなたの手帖の一部。', W / 2, 1262, `500 27px ${F.display}`, c.fg, 'center');
+    text(`SNS 記録帳 · ${location.host || 'sns-kirokucho'}${location.host ? location.pathname.replace(/index\.html$/, '') : ''}`, W / 2, 1308, `500 20px ${F.body}`, c.faint, 'center');
     return canvas;
   }
 
@@ -1122,7 +1191,7 @@
     document.body.style.overflow = 'hidden';
     $('#img-preview').hidden = true;
     $('#img-save').disabled = true;
-    setText($('#img-msg'), '画像を作っています…');
+    setText($('#img-msg'), 'ページを画像にしています…');
     try {
       const canvas = await drawDashboardImage();
       const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
@@ -1287,15 +1356,19 @@
   }
 
   /* ---------- controls ---------- */
+  const THEMES = { notebook: '#F3EFF6', mist: '#EEF3F6', night: '#1C1A27' };
   function applyTheme(name) {
+    const t = THEMES[name] ? name : 'notebook';
     const root = document.documentElement;
-    root.classList.remove('theme-warm', 'theme-fresh');
-    if (name === 'warm' || name === 'fresh') root.classList.add(`theme-${name}`);
-    $$('.theme').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.theme === (name || 'dark'))));
+    root.classList.remove('theme-mist', 'theme-night');
+    if (t !== 'notebook') root.classList.add(`theme-${t}`);
+    $$('.theme').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.theme === t)));
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', name === 'warm' ? '#fbf0e8' : name === 'fresh' ? '#edf6f0' : '#0d1626');
+    if (meta) meta.setAttribute('content', THEMES[t]);
   }
-  applyTheme(store.get(LS.theme) || 'dark');
+  const savedTheme = store.get(LS.theme);
+  const prefersDark = !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  applyTheme(THEMES[savedTheme] ? savedTheme : (prefersDark ? 'night' : 'notebook'));
   $$('.theme').forEach((b) => b.addEventListener('click', () => { applyTheme(b.dataset.theme); store.set(LS.theme, b.dataset.theme); }));
 
   const savedWin = Number(store.get(LS.win));
