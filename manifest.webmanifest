@@ -1,0 +1,16 @@
+{
+  "name": "SNS 記録帳",
+  "short_name": "SNS記録帳",
+  "description": "X・Threads・note のフォロワーやインプレッションを記録して、グラフで見返せる記録帳。記録はこのブラウザの中だけに保存されます。",
+  "lang": "ja",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0d1626",
+  "theme_color": "#0d1626",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
