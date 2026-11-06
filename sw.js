@@ -1,6 +1,6 @@
 // SNS 記録帳：通信がなくても開けるようにするための仕組み（service worker）
 // 記録そのものは扱いません（記録はブラウザの localStorage にあります）。
-const VERSION = 'v1';
+const VERSION = 'v2';
 const APP = `sns-kirokucho-app-${VERSION}`;
 const EXT = 'sns-kirokucho-ext';
 const FILES = [

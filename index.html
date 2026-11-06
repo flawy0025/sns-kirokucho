@@ -351,6 +351,9 @@ button { cursor: pointer; }
 .tgl input { width: 18px; height: 18px; margin: 0; accent-color: var(--gold); }
 .tbl.hide-x .c-x, .tbl.hide-threads .c-threads, .tbl.hide-note .c-note, .tbl.hide-posts .c-posts { display: none; }
 .tbl.hide-x, .tbl.hide-threads { min-width: 560px; }
+.sum-head .img-btn { padding: 6px 12px; font-size: 12px; }
+.img-body { display: grid; gap: 12px; }
+#img-preview { display: block; width: 100%; max-width: 420px; max-height: 62vh; object-fit: contain; margin-inline: auto; border-radius: 14px; border: 1px solid var(--line); background: var(--panel-2); }
 #data .tool-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); }
 .wipe-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px 12px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
 </style>
@@ -450,7 +453,7 @@ button { cursor: pointer; }
     </div>
 
     <div class="notice" id="install-tip" hidden>
-      <p>iPhone では、共有ボタンから「ホーム画面に追加」すると、アプリのように開けます。Safari のまま使うと、しばらく開かなかったときに記録が消えることがあるので、ホーム画面からの利用がおすすめです。</p>
+      <p>iPhone では、共有ボタンから「ホーム画面に追加」すると、アプリのように開けます。Safari のまま使うと、しばらく開かなかったときに記録が消えることがあるので、ホーム画面からの利用がおすすめです。<br>ホーム画面のアプリと Safari では記録が別々に保存されます。Safari で入れた記録は「書き出す」→ アプリで「取り込む」で移せます。</p>
       <button type="button" class="btn" id="install-close">閉じる</button>
     </div>
 
@@ -465,6 +468,10 @@ button { cursor: pointer; }
           <button type="button" data-win="7" aria-pressed="true">7日</button>
           <button type="button" data-win="30" aria-pressed="false">30日</button>
         </div>
+        <button type="button" class="btn img-btn" id="open-image" hidden>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 19h14"></path></svg>
+          画像で保存
+        </button>
       </div>
       <div class="stats">
         <div class="stat s-fol">
@@ -738,6 +745,24 @@ button { cursor: pointer; }
         <p class="form-err" id="form-err" role="alert"></p>
       </div>
     </form>
+  </div>
+</div>
+
+<div class="overlay" id="img-sheet" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="img-title">
+    <div class="sheet-head">
+      <h2 id="img-title">画像で保存</h2>
+      <button type="button" class="icon-btn" id="img-close" aria-label="閉じる"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+    </div>
+    <div class="img-body">
+      <img id="img-preview" alt="ダッシュボードのまとめ画像" hidden>
+      <p class="hint" id="img-msg" role="status"></p>
+      <div class="sheet-foot">
+        <span class="spacer"></span>
+        <button type="button" class="btn" id="img-cancel">閉じる</button>
+        <button type="button" class="btn-gold" id="img-save" disabled>保存する</button>
+      </div>
+    </div>
   </div>
 </div>
 

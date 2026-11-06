@@ -495,6 +495,7 @@
     setText($('#backup-last'), DATA.lastBackupAt ? `最後に書き出した日：${fmtDay(DATA.lastBackupAt)}` : 'まだ書き出していません。');
     $('#install-tip').hidden = !(isIOS() && !isStandalone() && store.get(LS.installTip) !== '1');
     $('#install-btn').hidden = !S.installEvt;
+    $('#open-image').hidden = !S.records.length;
   }
 
   function renderSettings() {
@@ -941,6 +942,233 @@
   }
 
 
+  /* ---------- dashboard image ---------- */
+  // ダッシュボードのまとめを 1080×1350 の画像に描きます（今のテーマの色を使います）。
+  const IMG = { blob: null, url: null, opener: null };
+  const cssVar = (name, fallback) => (getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback);
+  const hexA = (hex, a) => {
+    const m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(hex || '');
+    if (!m) return hex;
+    let h = m[1];
+    if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+    const n = parseInt(h, 16);
+    return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+  };
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+  function starPath(ctx, cx, cy, R, r) {
+    ctx.beginPath();
+    for (let i = 0; i < 10; i += 1) {
+      const a = -Math.PI / 2 + (i * Math.PI) / 5;
+      const rad = i % 2 ? r : R;
+      const px = cx + Math.cos(a) * rad; const py = cy + Math.sin(a) * rad;
+      if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py);
+    }
+    ctx.closePath();
+  }
+
+  async function drawDashboardImage() {
+    const W = 1080; const H = 1350;
+    const F = {
+      display: '"Zen Maru Gothic", "Hiragino Maru Gothic ProN", "Noto Sans JP", sans-serif',
+      body: '"Noto Sans JP", "Hiragino Sans", "Yu Gothic", sans-serif',
+      num: '"Manrope", "Noto Sans JP", "Hiragino Sans", sans-serif',
+    };
+    try {
+      await Promise.race([
+        Promise.all(['700 72px "Zen Maru Gothic"', '800 52px "Manrope"', '500 26px "Noto Sans JP"', '700 30px "Noto Sans JP"']
+          .map((f) => document.fonts.load(f, 'SNS記録帳フォロワー0123'))),
+        new Promise((resolve) => setTimeout(resolve, 2500)),
+      ]);
+    } catch (e) { /* fonts are optional */ }
+    const c = {};
+    ['bg', 'panel', 'panel-2', 'line', 'fg', 'muted', 'faint', 'gold', 'gold-ink', 'up', 'down', 'hero-fg', 'hero-muted', 'sky1', 'sky2', 'sky3', 'glow', 'mt1', 'mt2', 'star', 'orb', 'x', 'threads', 'note']
+      .forEach((k) => { c[k] = cssVar(`--${k}`, '#888'); });
+
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    ctx.textBaseline = 'alphabetic';
+    const text = (str, x, y, font, color, align) => { ctx.font = font; ctx.fillStyle = color; ctx.textAlign = align || 'left'; ctx.fillText(str, x, y); return ctx.measureText(str).width; };
+
+    // 背景と夜空
+    ctx.fillStyle = c.bg; ctx.fillRect(0, 0, W, H);
+    const HH = 420;
+    const sky = ctx.createLinearGradient(0, 0, 0, HH);
+    sky.addColorStop(0, c.sky1); sky.addColorStop(0.62, c.sky2); sky.addColorStop(1, c.sky3);
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, W, HH);
+    const glow = ctx.createRadialGradient(W * 0.72, HH * 0.86, 0, W * 0.72, HH * 0.86, W * 0.45);
+    glow.addColorStop(0, hexA(c.glow, 0.7)); glow.addColorStop(1, hexA(c.glow, 0));
+    ctx.fillStyle = glow; ctx.fillRect(0, 0, W, HH);
+    if (c.star && c.star !== 'transparent') {
+      ctx.fillStyle = c.star;
+      [[90, 50, 2.4], [210, 110, 1.6], [330, 40, 2.6], [470, 92, 1.6], [580, 34, 2], [760, 60, 2.4], [980, 46, 2], [1030, 120, 1.6], [40, 160, 1.6], [400, 170, 1.8]]
+        .forEach(([x, y, r]) => { ctx.globalAlpha = 0.75; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); });
+      ctx.globalAlpha = 1;
+    }
+    ctx.fillStyle = c.orb;
+    ctx.globalAlpha = 0.12; ctx.beginPath(); ctx.arc(880, 110, 64, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 0.9; ctx.beginPath(); ctx.arc(880, 110, 36, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.save(); ctx.scale(W / 1200, HH / 300);
+    ctx.fillStyle = c.mt1; ctx.fill(new Path2D('M0 214 L110 176 L215 198 L350 140 L470 184 L600 128 L720 170 L850 116 L980 166 L1090 140 L1200 168 L1200 300 L0 300 Z'));
+    ctx.fillStyle = c.mt2; ctx.fill(new Path2D('M0 246 L150 206 L270 232 L410 192 L545 228 L690 196 L830 234 L965 202 L1100 226 L1200 210 L1200 300 L0 300 Z'));
+    ctx.fillStyle = c.bg; ctx.fill(new Path2D('M0 278 Q200 252 390 270 T780 266 T1200 262 L1200 300 L0 300 Z'));
+    ctx.restore();
+
+    // 見出し
+    const tw = text('SNS 記録帳', 64, 136, `700 76px ${F.display}`, c['hero-fg']);
+    ctx.strokeStyle = c.gold; ctx.lineWidth = 5; ctx.lineJoin = 'round';
+    starPath(ctx, 64 + tw + 44, 110, 26, 11); ctx.stroke();
+    const st = windowStats();
+    text(st ? `${md(st.start)} 〜 ${md(st.end)} の${S.win}日間` : 'まだ記録がありません', 66, 196, `500 30px ${F.body}`, c['hero-muted']);
+    if (S.sampleMode) {
+      ctx.font = `700 26px ${F.body}`;
+      const sw = ctx.measureText('サンプル').width + 40;
+      ctx.fillStyle = c.gold; roundRect(ctx, W - 64 - sw, 40, sw, 48, 24); ctx.fill();
+      text('サンプル', W - 64 - sw / 2, 73, `700 26px ${F.body}`, c['gold-ink'], 'center');
+    }
+
+    // サマリー
+    const g = (p, f) => (on(p) && st && st[p][f] ? st[p][f].s : null);
+    const add = (...vs) => { const ok = vs.filter((v) => v !== null); return ok.length ? ok.reduce((a, v) => a + v, 0) : null; };
+    const fol = {}; PLATS.forEach((p) => { fol[p] = on(p) ? followerInfo(p) : null; });
+    const folList = PLATS.map((p) => fol[p]).filter(Boolean);
+    const folTotal = folList.length ? folList.reduce((a, f) => a + f.value, 0) : null;
+    const folChgList = folList.filter((f) => f.change !== null);
+    const folChg = folChgList.length ? folChgList.reduce((a, f) => a + f.change, 0) : null;
+    const pv = g('note', 'pv'); const nimp = g('note', 'impressions');
+    const stats = [
+      ['フォロワー合計', fmt(folTotal), '人', folChg === null ? '' : `前回比 ${signed(folChg)}`, folChg],
+      ['インプレッション', fmt(add(g('x', 'impressions'), g('threads', 'impressions'), g('note', 'impressions'))), '', '合計', null],
+      ['note PV', on('note') ? fmt(pv) : '—', '', on('note') && pv !== null && nimp ? `閲覧率 ${pct(pv / nimp)}` : '', null],
+      ['投稿数', fmt(add(g('x', 'posts'), g('threads', 'posts'))), '本', [on('x') ? `X ${fmt(g('x', 'posts'))}` : '', on('threads') ? `Threads ${fmt(g('threads', 'posts'))}` : ''].filter(Boolean).join('・'), null],
+    ];
+    const sy = 316;
+    ctx.fillStyle = c.panel; roundRect(ctx, 48, sy, W - 96, 220, 30); ctx.fill();
+    ctx.strokeStyle = c.line; ctx.lineWidth = 2; ctx.stroke();
+    stats.forEach(([label, value, unit, sub, sign], i) => {
+      const x = 84 + i * 240;
+      if (i) { ctx.fillStyle = c.line; ctx.fillRect(x - 22, sy + 40, 2, 140); }
+      text(label, x, sy + 66, `500 24px ${F.body}`, c.muted);
+      const vw = text(value, x, sy + 136, `800 54px ${F.num}`, c.fg);
+      if (unit && value !== '—') text(unit, x + vw + 6, sy + 136, `500 24px ${F.body}`, c.muted);
+      ctx.font = `500 22px ${F.body}`;
+      text(fitText(ctx, sub, 210), x, sy + 182, `500 22px ${F.body}`, sign > 0 ? c.up : sign < 0 ? c.down : c.muted);
+    });
+
+    // 媒体ごと
+    const plats = PLATS.filter(on);
+    const top = 572; const bottom = 1196; const gap = 22;
+    const rowH = Math.min(230, (bottom - top - gap * (plats.length - 1)) / Math.max(1, plats.length));
+    const days = S.anchor ? dayRange(addDays(S.anchor, -13), S.anchor) : [];
+    plats.forEach((p, i) => {
+      const y = top + i * (rowH + gap);
+      const color = c[p];
+      ctx.fillStyle = c.panel; roundRect(ctx, 48, y, W - 96, rowH, 28); ctx.fill();
+      ctx.strokeStyle = hexA(color, 0.45); ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = color; roundRect(ctx, 80, y + 24, 52, 52, 15); ctx.fill();
+      text(p === 'x' ? 'X' : p === 'threads' ? 'Th' : 'n', 106, y + 59, `800 24px ${F.num}`, '#ffffff', 'center');
+      text(NAMES[p], 150, y + 61, `700 32px ${F.display}`, c.fg);
+      const f = fol[p];
+      text('フォロワー', 80, y + rowH - 80, `500 22px ${F.body}`, c.muted);
+      const fw = text(f ? fmt(f.value) : '—', 80, y + rowH - 36, `800 52px ${F.num}`, c.fg);
+      if (f && f.change !== null) text(signed(f.change), 80 + fw + 14, y + rowH - 38, `700 26px ${F.num}`, f.change > 0 ? c.up : f.change < 0 ? c.down : c.muted);
+      const metric = p === 'note' ? 'pv' : 'impressions';
+      text(`${p === 'note' ? 'PV' : p === 'threads' ? '閲覧数' : 'インプレッション'}（${S.win}日間）`, 380, y + rowH - 80, `500 22px ${F.body}`, c.muted);
+      text(fmt(g(p, metric)), 380, y + rowH - 36, `800 44px ${F.num}`, c.fg);
+      // 直近14日の棒グラフ
+      const cx0 = 690; const cx1 = W - 84; const cy0 = y + 34; const cy1 = y + rowH - 50;
+      const vals = days.map((d) => val(S.byDate.get(d), p, metric));
+      const max = Math.max(1, ...vals.filter((v) => v !== null));
+      const step = (cx1 - cx0) / Math.max(1, days.length);
+      const bw = Math.max(4, step * 0.62);
+      ctx.fillStyle = hexA(c.line, 1); ctx.fillRect(cx0, cy1, cx1 - cx0, 2);
+      vals.forEach((v, k) => {
+        if (v === null) return;
+        const h = Math.max(3, ((cy1 - cy0) * v) / max);
+        ctx.fillStyle = k === vals.length - 1 ? color : hexA(color, 0.7);
+        roundRect(ctx, cx0 + k * step + (step - bw) / 2, cy1 - h, bw, h, Math.min(4, bw / 2)); ctx.fill();
+      });
+      text('直近14日', cx1, y + rowH - 18, `500 20px ${F.body}`, c.faint, 'right');
+    });
+
+    // 下
+    ctx.fillStyle = c.line; ctx.fillRect(64, 1232, W - 128, 2);
+    text('“ 数字は、続けてきた日々の足あと。', 64, 1286, `500 28px ${F.display}`, c.fg);
+    text('small steps, steady light.', W - 64, 1286, `italic 500 26px "Segoe Script", "Snell Roundhand", "Brush Script MT", cursive`, c.gold, 'right');
+    text(`SNS 記録帳 · ${location.host || 'sns-kirokucho'}${location.host ? location.pathname.replace(/index\.html$/, '') : ''}`, 64, 1324, `500 20px ${F.body}`, c.faint);
+    return canvas;
+  }
+
+  function fitText(ctx, str, maxW) {
+    if (ctx.measureText(str).width <= maxW) return str;
+    let t = str;
+    while (t.length > 1 && ctx.measureText(`${t}…`).width > maxW) t = t.slice(0, -1);
+    return `${t}…`;
+  }
+
+  async function openImageSheet(opener) {
+    if (!S.records.length) return;
+    IMG.opener = opener || document.activeElement;
+    $('#img-sheet').hidden = false;
+    document.body.style.overflow = 'hidden';
+    $('#img-preview').hidden = true;
+    $('#img-save').disabled = true;
+    setText($('#img-msg'), '画像を作っています…');
+    try {
+      const canvas = await drawDashboardImage();
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+      if (!blob) throw new Error('blob');
+      if (IMG.url) URL.revokeObjectURL(IMG.url);
+      IMG.blob = blob;
+      IMG.url = URL.createObjectURL(blob);
+      $('#img-preview').src = IMG.url;
+      $('#img-preview').hidden = false;
+      $('#img-save').disabled = false;
+      setText($('#img-msg'), isIOS()
+        ? '「保存する」を押して「画像を保存」を選ぶと、写真に保存できます。画像を長押ししても保存できます。'
+        : '「保存する」を押すと、画像ファイルとしてダウンロードします。');
+      setTimeout(() => $('#img-save').focus(), 30);
+    } catch (e) {
+      setText($('#img-msg'), '画像を作れませんでした。もう一度試してください。');
+    }
+  }
+
+  function closeImageSheet() {
+    $('#img-sheet').hidden = true;
+    document.body.style.overflow = '';
+    if (IMG.opener && document.contains(IMG.opener)) IMG.opener.focus();
+  }
+
+  async function saveImage() {
+    if (!IMG.blob) return;
+    const name = `sns-kirokucho-${S.anchor || today()}.png`;
+    const msg = $('#img-msg');
+    try {
+      const file = typeof File === 'function' ? new File([IMG.blob], name, { type: 'image/png' }) : null;
+      const mobile = isIOS() || /Android/i.test(navigator.userAgent);
+      if (mobile && file && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file] });
+        setText(msg, '共有メニューから保存しました。');
+      } else {
+        const a = document.createElement('a');
+        a.href = IMG.url; a.download = name;
+        document.body.append(a); a.click(); a.remove();
+        setText(msg, `${name} をダウンロードしました。`);
+      }
+    } catch (e) {
+      setText(msg, e && e.name === 'AbortError' ? '保存をやめました。' : '保存できませんでした。画像を長押しして保存することもできます。');
+    }
+  }
+
   /* ---------- export / import / settings ---------- */
   async function saveFile(filename, text, type, msgEl) {
     setText(msgEl, '');
@@ -1090,7 +1318,11 @@
   $('#sheet-close').addEventListener('click', closeSheet);
   $('#f-cancel').addEventListener('click', closeSheet);
   $('#sheet').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeSheet(); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#sheet').hidden) closeSheet(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (!$('#sheet').hidden) closeSheet();
+    if (!$('#img-sheet').hidden) closeImageSheet();
+  });
   $('#f-date').addEventListener('change', onDateChange);
   $('#f-memo').addEventListener('input', updateMemoCount);
   $('#entry').addEventListener('submit', onSave);
@@ -1113,6 +1345,11 @@
   $$('.tgl input[data-p]').forEach((inp) => inp.addEventListener('change', onPlatformToggle));
   $('#wipe').addEventListener('click', onWipe);
   $('#install-close').addEventListener('click', () => { store.set(LS.installTip, '1'); renderNotices(); });
+  $('#open-image').addEventListener('click', (e) => openImageSheet(e.currentTarget));
+  $('#img-close').addEventListener('click', closeImageSheet);
+  $('#img-cancel').addEventListener('click', closeImageSheet);
+  $('#img-save').addEventListener('click', saveImage);
+  $('#img-sheet').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeImageSheet(); });
 
   window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); S.installEvt = e; renderNotices(); });
   $('#install-btn').addEventListener('click', async () => {
