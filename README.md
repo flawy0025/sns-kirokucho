@@ -46,3 +46,7 @@ X・Threads・note のフォロワーやインプレッションを、手帖の�
 - [D3.js](https://d3js.org/) v7.8.5（ISC License）— `vendor/d3.LICENSE.txt`
 - [Tesseract.js](https://github.com/naptha/tesseract.js) v5.1.1（Apache License 2.0）— 使うときに jsDelivr から読み込み
 - フォント：Kiwi Maru、Noto Sans JP、Quicksand（Google Fonts、SIL Open Font License）
+
+---
+
+更新する人へ：使っている人の記録を消さないためのきまりと、公開前のチェックは [dev/MAINTAINING.md](dev/MAINTAINING.md) にあります。

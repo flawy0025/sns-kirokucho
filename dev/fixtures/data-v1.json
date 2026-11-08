@@ -1,0 +1,848 @@
+{
+ "version": 1,
+ "records": {
+  "2026-09-22": {
+   "date": "2026-09-22",
+   "x": {
+    "followers": 120,
+    "impressions": 397,
+    "posts": 0,
+    "engagement": null
+   },
+   "threads": {
+    "followers": 80,
+    "impressions": 1197,
+    "posts": 0,
+    "engagement": 24
+   },
+   "note": {
+    "followers": 31,
+    "pv": 24,
+    "impressions": null,
+    "likes": 8
+   },
+   "memo": "",
+   "updatedAt": "2026-09-23T09:00:00Z"
+  },
+  "2026-09-23": {
+   "date": "2026-09-23",
+   "x": {
+    "followers": 120,
+    "impressions": 1976,
+    "posts": 3,
+    "engagement": 11
+   },
+   "threads": {
+    "followers": 80,
+    "impressions": 592,
+    "posts": 0,
+    "engagement": 36
+   },
+   "note": {
+    "followers": null,
+    "pv": 118,
+    "impressions": null,
+    "likes": 0
+   },
+   "memo": "",
+   "updatedAt": "2026-09-24T09:00:00Z"
+  },
+  "2026-09-24": {
+   "date": "2026-09-24",
+   "x": {
+    "followers": 121,
+    "impressions": 453,
+    "posts": 4,
+    "engagement": 77
+   },
+   "threads": {
+    "followers": 80,
+    "impressions": 912,
+    "posts": 0,
+    "engagement": 15
+   },
+   "note": {
+    "followers": 31,
+    "pv": 21,
+    "impressions": null,
+    "likes": 8
+   },
+   "memo": "",
+   "updatedAt": "2026-09-25T09:00:00Z"
+  },
+  "2026-09-25": {
+   "date": "2026-09-25",
+   "x": {
+    "followers": 121,
+    "impressions": 790,
+    "posts": 4,
+    "engagement": null
+   },
+   "threads": {
+    "followers": 81,
+    "impressions": 341,
+    "posts": 4,
+    "engagement": 20
+   },
+   "note": {
+    "followers": null,
+    "pv": 56,
+    "impressions": null,
+    "likes": 1
+   },
+   "memo": "",
+   "updatedAt": "2026-09-26T09:00:00Z"
+  },
+  "2026-09-26": {
+   "date": "2026-09-26",
+   "x": {
+    "followers": 122,
+    "impressions": 1725,
+    "posts": 0,
+    "engagement": 73
+   },
+   "threads": {
+    "followers": 83,
+    "impressions": 1558,
+    "posts": 0,
+    "engagement": 37
+   },
+   "note": {
+    "followers": 32,
+    "pv": 25,
+    "impressions": null,
+    "likes": 9
+   },
+   "memo": "ひとこと",
+   "updatedAt": "2026-09-27T09:00:00Z"
+  },
+  "2026-09-27": {
+   "date": "2026-09-27",
+   "x": {
+    "followers": 122,
+    "impressions": 1486,
+    "posts": 3,
+    "engagement": 77
+   },
+   "threads": {
+    "followers": 84,
+    "impressions": 1028,
+    "posts": 2,
+    "engagement": 20
+   },
+   "note": {
+    "followers": null,
+    "pv": 73,
+    "impressions": null,
+    "likes": 2
+   },
+   "memo": "",
+   "updatedAt": "2026-09-28T09:00:00Z"
+  },
+  "2026-09-28": {
+   "date": "2026-09-28",
+   "x": {
+    "followers": 124,
+    "impressions": 1429,
+    "posts": 4,
+    "engagement": null
+   },
+   "threads": {
+    "followers": 84,
+    "impressions": 1113,
+    "posts": 2,
+    "engagement": 47
+   },
+   "note": {
+    "followers": 33,
+    "pv": 124,
+    "impressions": null,
+    "likes": 4
+   },
+   "memo": "",
+   "updatedAt": "2026-09-29T09:00:00Z"
+  },
+  "2026-09-29": {
+   "date": "2026-09-29",
+   "x": {
+    "followers": 125,
+    "impressions": 2296,
+    "posts": 3,
+    "engagement": 24
+   },
+   "threads": {
+    "followers": 84,
+    "impressions": 800,
+    "posts": 1,
+    "engagement": 60
+   },
+   "note": {
+    "followers": null,
+    "pv": 135,
+    "impressions": null,
+    "likes": 6
+   },
+   "memo": "",
+   "updatedAt": "2026-09-30T09:00:00Z"
+  },
+  "2026-10-01": {
+   "date": "2026-10-01",
+   "x": {
+    "followers": 124,
+    "impressions": 1593,
+    "posts": 5,
+    "engagement": null
+   },
+   "threads": {
+    "followers": 84,
+    "impressions": 817,
+    "posts": 4,
+    "engagement": 32
+   },
+   "note": {
+    "followers": null,
+    "pv": 126,
+    "impressions": null,
+    "likes": 1
+   },
+   "memo": "",
+   "updatedAt": "2026-10-02T09:00:00Z"
+  },
+  "2026-10-02": {
+   "date": "2026-10-02",
+   "x": {
+    "followers": 123,
+    "impressions": 466,
+    "posts": 0,
+    "engagement": 42
+   },
+   "threads": {
+    "followers": 85,
+    "impressions": 1425,
+    "posts": 4,
+    "engagement": 44
+   },
+   "note": {
+    "followers": 34,
+    "pv": 124,
+    "impressions": null,
+    "likes": 4
+   },
+   "memo": "",
+   "updatedAt": "2026-10-03T09:00:00Z"
+  },
+  "2026-10-03": {
+   "date": "2026-10-03",
+   "x": {
+    "followers": 125,
+    "impressions": 292,
+    "posts": 3,
+    "engagement": 48
+   },
+   "threads": {
+    "followers": 86,
+    "impressions": 444,
+    "posts": 4,
+    "engagement": 8
+   },
+   "note": {
+    "followers": null,
+    "pv": 136,
+    "impressions": null,
+    "likes": 0
+   },
+   "memo": "ひとこと",
+   "updatedAt": "2026-10-04T09:00:00Z"
+  },
+  "2026-10-04": {
+   "date": "2026-10-04",
+   "x": {
+    "followers": 125,
+    "impressions": 1214,
+    "posts": 3,
+    "engagement": null
+   },
+   "threads": {
+    "followers": 87,
+    "impressions": 900,
+    "posts": 3,
+    "engagement": 6
+   },
+   "note": {
+    "followers": 34,
+    "pv": 52,
+    "impressions": null,
+    "likes": 7
+   },
+   "memo": "",
+   "updatedAt": "2026-10-05T09:00:00Z"
+  },
+  "2026-10-05": {
+   "date": "2026-10-05",
+   "x": {
+    "followers": 126,
+    "impressions": 760,
+    "posts": 3,
+    "engagement": 73
+   },
+   "threads": {
+    "followers": 89,
+    "impressions": 670,
+    "posts": 3,
+    "engagement": 23
+   },
+   "note": {
+    "followers": null,
+    "pv": 107,
+    "impressions": null,
+    "likes": 3
+   },
+   "memo": "",
+   "updatedAt": "2026-10-06T09:00:00Z"
+  },
+  "2026-10-06": {
+   "date": "2026-10-06",
+   "x": {
+    "followers": 126,
+    "impressions": 819,
+    "posts": 1,
+    "engagement": 87
+   },
+   "threads": {
+    "followers": 89,
+    "impressions": 577,
+    "posts": 0,
+    "engagement": 32
+   },
+   "note": {
+    "followers": 34,
+    "pv": 56,
+    "impressions": null,
+    "likes": 4
+   },
+   "memo": "",
+   "updatedAt": "2026-10-07T09:00:00Z"
+  },
+  "2026-10-07": {
+   "date": "2026-10-07",
+   "x": {
+    "followers": 126,
+    "impressions": 1916,
+    "posts": 4,
+    "engagement": null
+   },
+   "threads": {
+    "followers": 89,
+    "impressions": 856,
+    "posts": 4,
+    "engagement": 37
+   },
+   "note": {
+    "followers": null,
+    "pv": 91,
+    "impressions": null,
+    "likes": 2
+   },
+   "memo": "",
+   "updatedAt": "2026-10-08T09:00:00Z"
+  },
+  "2026-10-08": {
+   "date": "2026-10-08",
+   "x": {
+    "followers": 128,
+    "impressions": 2070,
+    "posts": 5,
+    "engagement": 74
+   },
+   "threads": {
+    "followers": 91,
+    "impressions": 903,
+    "posts": 3,
+    "engagement": 26
+   },
+   "note": {
+    "followers": 34,
+    "pv": 110,
+    "impressions": null,
+    "likes": 1
+   },
+   "memo": "",
+   "updatedAt": "2026-10-09T09:00:00Z"
+  },
+  "2026-10-10": {
+   "date": "2026-10-10",
+   "x": {
+    "followers": 129,
+    "impressions": 980,
+    "posts": 0,
+    "engagement": null
+   },
+   "threads": {
+    "followers": 92,
+    "impressions": 527,
+    "posts": 3,
+    "engagement": 11
+   },
+   "note": {
+    "followers": 34,
+    "pv": 38,
+    "impressions": null,
+    "likes": 5
+   },
+   "memo": "ひとこと",
+   "updatedAt": "2026-10-11T09:00:00Z"
+  },
+  "2026-10-11": {
+   "date": "2026-10-11",
+   "x": {
+    "followers": 130,
+    "impressions": 200,
+    "posts": 4,
+    "engagement": 22
+   },
+   "threads": {
+    "followers": 92,
+    "impressions": 1198,
+    "posts": 0,
+    "engagement": 24
+   },
+   "note": {
+    "followers": null,
+    "pv": 16,
+    "impressions": null,
+    "likes": 1
+   },
+   "memo": "",
+   "updatedAt": "2026-10-12T09:00:00Z"
+  },
+  "2026-10-12": {
+   "date": "2026-10-12",
+   "x": {
+    "followers": 130,
+    "impressions": 808,
+    "posts": 5,
+    "engagement": 35
+   },
+   "threads": {
+    "followers": 94,
+    "impressions": 811,
+    "posts": 4,
+    "engagement": 24
+   },
+   "note": {
+    "followers": 35,
+    "pv": 131,
+    "impressions": null,
+    "likes": 1
+   },
+   "memo": "",
+   "updatedAt": "2026-10-13T09:00:00Z"
+  },
+  "2026-10-13": {
+   "date": "2026-10-13",
+   "x": {
+    "followers": 129,
+    "impressions": 2167,
+    "posts": 3,
+    "engagement": null
+   },
+   "threads": {
+    "followers": 95,
+    "impressions": 738,
+    "posts": 0,
+    "engagement": 10
+   },
+   "note": {
+    "followers": null,
+    "pv": 36,
+    "impressions": null,
+    "likes": 5
+   },
+   "memo": "",
+   "updatedAt": "2026-10-14T09:00:00Z"
+  },
+  "2026-10-14": {
+   "date": "2026-10-14",
+   "x": {
+    "followers": 131,
+    "impressions": 861,
+    "posts": 4,
+    "engagement": 5
+   },
+   "threads": {
+    "followers": 96,
+    "impressions": 520,
+    "posts": 4,
+    "engagement": 24
+   },
+   "note": {
+    "followers": 37,
+    "pv": 47,
+    "impressions": null,
+    "likes": 8
+   },
+   "memo": "",
+   "updatedAt": "2026-10-15T09:00:00Z"
+  },
+  "2026-10-15": {
+   "date": "2026-10-15",
+   "x": {
+    "followers": 130,
+    "impressions": 572,
+    "posts": 5,
+    "engagement": 36
+   },
+   "threads": {
+    "followers": 98,
+    "impressions": 1161,
+    "posts": 2,
+    "engagement": 59
+   },
+   "note": {
+    "followers": null,
+    "pv": 52,
+    "impressions": null,
+    "likes": 5
+   },
+   "memo": "",
+   "updatedAt": "2026-10-16T09:00:00Z"
+  },
+  "2026-10-16": {
+   "date": "2026-10-16",
+   "x": {
+    "followers": 130,
+    "impressions": 1113,
+    "posts": 4,
+    "engagement": null
+   },
+   "threads": {
+    "followers": 100,
+    "impressions": 499,
+    "posts": 1,
+    "engagement": 53
+   },
+   "note": {
+    "followers": 37,
+    "pv": 112,
+    "impressions": null,
+    "likes": 3
+   },
+   "memo": "",
+   "updatedAt": "2026-10-17T09:00:00Z"
+  },
+  "2026-10-17": {
+   "date": "2026-10-17",
+   "x": {
+    "followers": 130,
+    "impressions": 1656,
+    "posts": 5,
+    "engagement": 6
+   },
+   "threads": {
+    "followers": 102,
+    "impressions": 157,
+    "posts": 2,
+    "engagement": 31
+   },
+   "note": {
+    "followers": null,
+    "pv": 76,
+    "impressions": null,
+    "likes": 3
+   },
+   "memo": "ひとこと",
+   "updatedAt": "2026-10-18T09:00:00Z"
+  },
+  "2026-10-19": {
+   "date": "2026-10-19",
+   "x": {
+    "followers": 132,
+    "impressions": 2031,
+    "posts": 5,
+    "engagement": null
+   },
+   "threads": {
+    "followers": 104,
+    "impressions": 815,
+    "posts": 2,
+    "engagement": 6
+   },
+   "note": {
+    "followers": null,
+    "pv": 66,
+    "impressions": null,
+    "likes": 1
+   },
+   "memo": "",
+   "updatedAt": "2026-10-20T09:00:00Z"
+  },
+  "2026-10-20": {
+   "date": "2026-10-20",
+   "x": {
+    "followers": 132,
+    "impressions": 1583,
+    "posts": 1,
+    "engagement": 64
+   },
+   "threads": {
+    "followers": 105,
+    "impressions": 1378,
+    "posts": 4,
+    "engagement": 54
+   },
+   "note": {
+    "followers": 38,
+    "pv": 10,
+    "impressions": null,
+    "likes": 7
+   },
+   "memo": "",
+   "updatedAt": "2026-10-21T09:00:00Z"
+  },
+  "2026-10-21": {
+   "date": "2026-10-21",
+   "x": {
+    "followers": 134,
+    "impressions": 691,
+    "posts": 3,
+    "engagement": 28
+   },
+   "threads": {
+    "followers": 106,
+    "impressions": 1079,
+    "posts": 1,
+    "engagement": 28
+   },
+   "note": {
+    "followers": null,
+    "pv": 95,
+    "impressions": null,
+    "likes": 1
+   },
+   "memo": "",
+   "updatedAt": "2026-10-22T09:00:00Z"
+  },
+  "2026-10-22": {
+   "date": "2026-10-22",
+   "x": {
+    "followers": 136,
+    "impressions": 1844,
+    "posts": 5,
+    "engagement": null
+   },
+   "threads": {
+    "followers": 107,
+    "impressions": 273,
+    "posts": 1,
+    "engagement": 11
+   },
+   "note": {
+    "followers": 39,
+    "pv": 42,
+    "impressions": null,
+    "likes": 0
+   },
+   "memo": "",
+   "updatedAt": "2026-10-23T09:00:00Z"
+  },
+  "2026-10-23": {
+   "date": "2026-10-23",
+   "x": {
+    "followers": 136,
+    "impressions": 798,
+    "posts": 4,
+    "engagement": 79
+   },
+   "threads": {
+    "followers": 109,
+    "impressions": 1071,
+    "posts": 2,
+    "engagement": 10
+   },
+   "note": {
+    "followers": null,
+    "pv": 43,
+    "impressions": null,
+    "likes": 0
+   },
+   "memo": "",
+   "updatedAt": "2026-10-24T09:00:00Z"
+  },
+  "2026-10-24": {
+   "date": "2026-10-24",
+   "x": {
+    "followers": 135,
+    "impressions": 1976,
+    "posts": 1,
+    "engagement": 30
+   },
+   "threads": {
+    "followers": 109,
+    "impressions": 157,
+    "posts": 2,
+    "engagement": 14
+   },
+   "note": {
+    "followers": 40,
+    "pv": 84,
+    "impressions": null,
+    "likes": 8
+   },
+   "memo": "ひとこと",
+   "updatedAt": "2026-10-25T09:00:00Z"
+  },
+  "2026-10-25": {
+   "date": "2026-10-25",
+   "x": {
+    "followers": 135,
+    "impressions": 1262,
+    "posts": 4,
+    "engagement": null
+   },
+   "threads": {
+    "followers": 111,
+    "impressions": 958,
+    "posts": 1,
+    "engagement": 4
+   },
+   "note": {
+    "followers": null,
+    "pv": 100,
+    "impressions": null,
+    "likes": 7
+   },
+   "memo": "",
+   "updatedAt": "2026-10-26T09:00:00Z"
+  },
+  "2026-10-26": {
+   "date": "2026-10-26",
+   "x": {
+    "followers": 137,
+    "impressions": 2254,
+    "posts": 1,
+    "engagement": 71
+   },
+   "threads": {
+    "followers": 113,
+    "impressions": 410,
+    "posts": 4,
+    "engagement": 33
+   },
+   "note": {
+    "followers": 41,
+    "pv": 14,
+    "impressions": null,
+    "likes": 7
+   },
+   "memo": "",
+   "updatedAt": "2026-10-27T09:00:00Z"
+  },
+  "2026-10-28": {
+   "date": "2026-10-28",
+   "x": {
+    "followers": 137,
+    "impressions": 813,
+    "posts": 1,
+    "engagement": null
+   },
+   "threads": {
+    "followers": 115,
+    "impressions": 389,
+    "posts": 3,
+    "engagement": 40
+   },
+   "note": {
+    "followers": 41,
+    "pv": 40,
+    "impressions": null,
+    "likes": 8
+   },
+   "memo": "",
+   "updatedAt": "2026-10-29T09:00:00Z"
+  },
+  "2026-10-29": {
+   "date": "2026-10-29",
+   "x": {
+    "followers": 136,
+    "impressions": 634,
+    "posts": 4,
+    "engagement": 10
+   },
+   "threads": {
+    "followers": 116,
+    "impressions": 608,
+    "posts": 1,
+    "engagement": 18
+   },
+   "note": {
+    "followers": null,
+    "pv": 20,
+    "impressions": null,
+    "likes": 1
+   },
+   "memo": "",
+   "updatedAt": "2026-10-30T09:00:00Z"
+  },
+  "2026-10-30": {
+   "date": "2026-10-30",
+   "x": {
+    "followers": 137,
+    "impressions": 459,
+    "posts": 3,
+    "engagement": 44
+   },
+   "threads": {
+    "followers": 117,
+    "impressions": 1354,
+    "posts": 4,
+    "engagement": 39
+   },
+   "note": {
+    "followers": 42,
+    "pv": 61,
+    "impressions": null,
+    "likes": 4
+   },
+   "memo": "",
+   "updatedAt": "2026-10-31T09:00:00Z"
+  },
+  "2026-10-31": {
+   "date": "2026-10-31",
+   "x": {
+    "followers": 138,
+    "impressions": 2279,
+    "posts": 1,
+    "engagement": null,
+    "bookmarks": 12
+   },
+   "threads": {
+    "followers": 119,
+    "impressions": 1531,
+    "posts": 4,
+    "engagement": 57
+   },
+   "note": {
+    "followers": null,
+    "pv": 76,
+    "impressions": null,
+    "likes": 8
+   },
+   "memo": "ひとこと",
+   "updatedAt": "2026-11-01T09:00:00Z",
+   "tags": [
+    "テスト"
+   ]
+  }
+ },
+ "settings": {
+  "platforms": {
+   "x": true,
+   "threads": true,
+   "note": false
+  }
+ },
+ "lastBackupAt": "2026-10-30T12:00:00.000Z",
+ "futureTopLevel": {
+  "keep": true
+ }
+}

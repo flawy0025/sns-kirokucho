@@ -51,39 +51,112 @@
 
   let toastTimer = null;
   const toast = (msg) => { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 2600); };
-  const banner = (msg) => { const b = $('#banner'); b.textContent = msg || ''; b.hidden = !msg; };
+  const banner = (msg, action) => {
+    const b = $('#banner'); const act = $('#banner-act');
+    setText($('#banner-text'), msg || ''); b.hidden = !msg;
+    act.hidden = !(msg && action);
+    if (msg && action) { act.textContent = action.label; act.onclick = action.run; } else { act.onclick = null; }
+  };
 
   
   /* ---------- storage (this browser only) ---------- */
+  // 記録を守るためのきまり（くわしくは dev/MAINTAINING.md）
+  //  - DATA_KEY の名前は変えない。変えると、それまでの記録が読めなくなる
+  //  - 記録の形を変えるときは DATA_VERSION を 1 上げ、MIGRATIONS に「ひとつ前 → この版」の変換を足す
+  //  - 変換の前には、元の記録を sns-kirokucho.backup.v<番号>.<日時> にそのまま控える
+  //  - 読めない記録は消さずに sns-kirokucho.rescue.<日時> へ控えてから、空の手帖で始める
+  //  - 新しい版のアプリが書いた記録を見つけたら、古い版のまま上書きしないよう保存を止める
   const DATA_KEY = 'sns-kirokucho.data.v1';
+  const DATA_VERSION = 1;
+  const MIGRATIONS = {
+    // 2: (d) => { /* 1 → 2 の変換。古い項目は消さずに残す */ return d; },
+  };
+  const BACKUP_PREFIX = 'sns-kirokucho.backup.';
+  const RESCUE_PREFIX = 'sns-kirokucho.rescue.';
   const blank = () => ({
-    version: 1,
+    version: DATA_VERSION,
     records: {},
     settings: { platforms: { x: true, threads: true, note: true } },
     lastBackupAt: null,
   });
   let DATA = blank();
   let storageOk = true;
+  let saveLock = null; // null / 'newer'（新しい版の記録）/ 'unsafe'（控えを作れなかった）
+  let rescueKey = null;
 
-  function loadData() {
+  const isPlain = (o) => !!o && typeof o === 'object' && !Array.isArray(o);
+  const verOf = (d) => (Number.isInteger(d.version) && d.version > 0 ? d.version : 1);
+  function shape(d) {
+    const base = blank();
+    const st = isPlain(d.settings) ? d.settings : {};
+    return {
+      ...base,
+      ...d,
+      settings: { ...base.settings, ...st, platforms: { ...base.settings.platforms, ...(isPlain(st.platforms) ? st.platforms : {}) } },
+    };
+  }
+
+  // 元の文字列を、そのまま別の名前で控える（同じ中身の控えがあれば作り直さない）
+  function keepAside(prefix, raw) {
     try {
-      const raw = localStorage.getItem(DATA_KEY);
-      if (!raw) { DATA = blank(); return; }
-      const d = JSON.parse(raw);
-      if (!d || typeof d !== 'object' || !d.records || typeof d.records !== 'object') { DATA = blank(); return; }
-      const base = blank();
-      DATA = {
-        ...base,
-        ...d,
-        settings: { ...base.settings, ...(d.settings || {}), platforms: { ...base.settings.platforms, ...((d.settings || {}).platforms || {}) } },
-      };
+      for (let i = 0; i < localStorage.length; i += 1) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith(prefix) && localStorage.getItem(k) === raw) return k;
+      }
+      const k = `${prefix}${new Date().toISOString()}`;
+      localStorage.setItem(k, raw);
+      return localStorage.getItem(k) === raw ? k : null;
     } catch (e) {
-      storageOk = false;
+      return null;
     }
   }
 
+  function loadData() {
+    saveLock = null;
+    let raw = null;
+    try { raw = localStorage.getItem(DATA_KEY); } catch (e) { storageOk = false; DATA = blank(); return; }
+    if (!raw) { DATA = blank(); return; }
+    let d = null;
+    try { d = JSON.parse(raw); } catch (e) { d = null; }
+    if (!isPlain(d) || !isPlain(d.records)) {
+      const k = keepAside(RESCUE_PREFIX, raw);
+      if (k) rescueKey = k; else saveLock = 'unsafe';
+      DATA = blank();
+      return;
+    }
+    const ver = verOf(d);
+    if (ver > DATA_VERSION) { saveLock = 'newer'; DATA = shape(d); return; }
+    if (ver < DATA_VERSION) {
+      if (!keepAside(`${BACKUP_PREFIX}v${ver}.`, raw)) { saveLock = 'unsafe'; DATA = shape(d); return; }
+      try {
+        let m = JSON.parse(raw);
+        for (let v = ver + 1; v <= DATA_VERSION; v += 1) { m = MIGRATIONS[v](m); m.version = v; }
+        DATA = shape(m);
+      } catch (e) {
+        saveLock = 'unsafe'; DATA = shape(d); return;
+      }
+      persist();
+      return;
+    }
+    DATA = shape(d);
+  }
+
   function persist() {
+    if (saveLock) return false;
     try {
+      // ほかのタブや新しい版が書いた記録を、気づかずに上書きしない
+      const cur = localStorage.getItem(DATA_KEY);
+      if (cur && cur !== '') {
+        let c = null;
+        try { c = JSON.parse(cur); } catch (e) { c = null; }
+        if (isPlain(c) && verOf(c) > DATA_VERSION) { saveLock = 'newer'; showStorageNotice(); return false; }
+        if (!isPlain(c) || !isPlain(c.records)) {
+          const k = keepAside(RESCUE_PREFIX, cur);
+          if (!k) { saveLock = 'unsafe'; showStorageNotice(); return false; }
+          rescueKey = k;
+        }
+      }
+      DATA.version = DATA_VERSION;
       localStorage.setItem(DATA_KEY, JSON.stringify(DATA));
       storageOk = true;
       return true;
@@ -91,6 +164,27 @@
       storageOk = false;
       return false;
     }
+  }
+
+  const saveFailMsg = (fallback) => (saveLock === 'newer'
+    ? '新しい版のアプリで書かれた記録があるため、記録を守るためにいまは保存を止めています。ページを読み込み直してください。'
+    : saveLock === 'unsafe'
+      ? '記録の控えを作れなかったため、記録を守るためにいまは保存を止めています。'
+      : fallback);
+
+  function showStorageNotice() {
+    if (!storageOk) { banner('このブラウザでは記録を保存できません（プライベートブラウズなど）。記録するには、通常のブラウズで開いてください。'); return; }
+    if (saveLock === 'newer') { banner('新しい版のアプリで書かれた記録が見つかりました。記録を守るため、いまは保存を止めています。読み込み直すと新しい版になります。', { label: '読み込み直す', run: () => location.reload() }); return; }
+    if (saveLock === 'unsafe') { banner('記録の控えを作れなかったため、記録を守るために保存を止めています。端末の空き容量を確かめてから、読み込み直してください。', { label: '読み込み直す', run: () => location.reload() }); return; }
+    if (rescueKey) { banner('読み取れない記録が見つかったので、消さずに控えとして取っておきました。念のため、ファイルにも残しておけます。', { label: '控えを書き出す', run: exportRescue }); return; }
+    banner('');
+  }
+
+  function exportRescue() {
+    let raw = null;
+    try { raw = rescueKey ? localStorage.getItem(rescueKey) : null; } catch (e) { raw = null; }
+    if (raw === null) { banner('控えが見つかりませんでした。'); return; }
+    saveFile(`sns-kirokucho-控え-${today()}.txt`, raw, 'text/plain', $('#exp-msg'), { markBackup: false });
   }
 
   let persistAsked = false;
@@ -694,7 +788,9 @@
     const existing = S.byDate.get(date);
     const moving = S.editing && S.editing !== date;
     const base = S.editing ? S.byDate.get(S.editing) : existing;
-    const body = { date, x: {}, threads: {}, note: {} };
+    // 知らない項目（新しい版で増えた項目など）も消さずに引き継ぐ
+    const keep = base ? JSON.parse(JSON.stringify(base)) : {};
+    const body = { ...keep, date, x: { ...(isPlain(keep.x) ? keep.x : {}) }, threads: { ...(isPlain(keep.threads) ? keep.threads : {}) }, note: { ...(isPlain(keep.note) ? keep.note : {}) } };
     let any = false;
     for (const p of PLATS) {
       for (const [f] of FIELDS[p]) {
@@ -720,7 +816,7 @@
     DATA.records[date] = body;
     if (!persist()) {
       DATA.records = JSON.parse(before);
-      setText(err, 'この端末に保存できませんでした。プライベートブラウズを使っていないか、空き容量があるか確かめてください。');
+      setText(err, saveFailMsg('この端末に保存できませんでした。プライベートブラウズを使っていないか、空き容量があるか確かめてください。'));
       return;
     }
     askPersistent();
@@ -734,7 +830,7 @@
     if (!S.confirmDelete) { S.confirmDelete = true; setText($('#f-delete'), 'もう一度押すと削除'); return; }
     const before = DATA.records[S.editing];
     delete DATA.records[S.editing];
-    if (!persist()) { DATA.records[S.editing] = before; setText($('#form-err'), '削除できませんでした。もう一度試してください。'); return; }
+    if (!persist()) { DATA.records[S.editing] = before; setText($('#form-err'), saveFailMsg('削除できませんでした。もう一度試してください。')); return; }
     closeSheet();
     toast('削除しました');
     refresh();
@@ -1239,7 +1335,7 @@
   }
 
   /* ---------- export / import / settings ---------- */
-  async function saveFile(filename, text, type, msgEl) {
+  async function saveFile(filename, text, type, msgEl, opts = {}) {
     setText(msgEl, '');
     const blob = new Blob([text], { type });
     try {
@@ -1253,8 +1349,7 @@
         document.body.append(a); a.click(); a.remove();
         setTimeout(() => URL.revokeObjectURL(url), 5000);
       }
-      DATA.lastBackupAt = new Date().toISOString();
-      persist();
+      if (opts.markBackup !== false) { DATA.lastBackupAt = new Date().toISOString(); persist(); }
       setText(msgEl, `${filename} を書き出しました。`);
       renderNotices();
     } catch (e) {
@@ -1312,7 +1407,7 @@
     rows.forEach((r) => { DATA.records[r.date] = r; });
     if (!persist()) {
       DATA.records = JSON.parse(before);
-      msg.classList.add('err'); setText(msg, 'この端末に保存できませんでした。空き容量やブラウザの設定を確かめてください。');
+      msg.classList.add('err'); setText(msg, saveFailMsg('この端末に保存できませんでした。空き容量やブラウザの設定を確かめてください。'));
       return;
     }
     askPersistent();
@@ -1332,8 +1427,9 @@
       return;
     }
     setText($('#tgl-msg'), '');
+    const prev = DATA.settings.platforms;
     DATA.settings.platforms = next;
-    persist();
+    if (!persist()) { DATA.settings.platforms = prev; ev.target.checked = !ev.target.checked; setText($('#tgl-msg'), saveFailMsg('保存できませんでした。')); return; }
     renderAll();
   }
 
@@ -1346,9 +1442,17 @@
       return;
     }
     S.confirmWipe = false;
+    const before = JSON.stringify(DATA.records);
     DATA.records = {};
     DATA.lastBackupAt = null;
-    persist();
+    if (!persist()) { DATA.records = JSON.parse(before); btn.textContent = 'すべての記録を消す'; setText($('#tgl-msg'), saveFailMsg('消せませんでした。もう一度試してください。')); return; }
+    // 「すべて消す」は控えも消す（この手帖の名前で始まるものだけ）
+    try {
+      const keys = [];
+      for (let i = 0; i < localStorage.length; i += 1) { const k = localStorage.key(i); if (k && (k.startsWith(BACKUP_PREFIX) || k.startsWith(RESCUE_PREFIX))) keys.push(k); }
+      keys.forEach((k) => localStorage.removeItem(k));
+    } catch (e) { /* nothing more to remove */ }
+    rescueKey = null; showStorageNotice();
     btn.textContent = 'すべての記録を消す';
     toast('すべての記録を消しました');
     S.sampleMode = false;
@@ -1432,7 +1536,7 @@
   });
 
   // 別のタブで記録が変わったとき
-  window.addEventListener('storage', (e) => { if (e.key === DATA_KEY) { loadData(); if (!S.sampleMode) refresh(); } });
+  window.addEventListener('storage', (e) => { if (e.key === DATA_KEY) { loadData(); showStorageNotice(); if (!S.sampleMode) refresh(); } });
 
   let rz = null;
   const ro = new ResizeObserver(() => {
@@ -1442,9 +1546,9 @@
   charts().forEach(([el]) => ro.observe(el));
 
   /* ---------- start ---------- */
-  loadData();
   try { localStorage.setItem('sns-kirokucho.test', '1'); localStorage.removeItem('sns-kirokucho.test'); } catch (e) { storageOk = false; }
-  if (!storageOk) banner('このブラウザでは記録を保存できません（プライベートブラウズなど）。記録するには、通常のブラウズで開いてください。');
+  loadData();
+  showStorageNotice();
   refresh();
 
   if ('serviceWorker' in navigator && location.protocol === 'https:') {

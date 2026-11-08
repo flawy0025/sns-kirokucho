@@ -93,6 +93,7 @@ button { cursor: pointer; }
 .btn-main.sm { min-height: 42px; padding: 0 16px; font-size: 13px; border-radius: 14px; }
 .btn-main:disabled { opacity: 0.55; cursor: default; }
 .btn-soft { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 18px; border-radius: 16px; border: 1.5px dashed var(--dash); background: var(--panel); color: var(--fg); font-weight: 700; font-size: 15px; white-space: nowrap; }
+.btn-soft.sm { min-height: 40px; padding: 0 14px; font-size: 13px; border-radius: 14px; }
 .btn-soft svg, .btn svg { color: var(--accent); }
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 42px; padding: 0 14px; border-radius: 13px; border: 1.5px dashed var(--dash); background: var(--panel); color: var(--fg); font-size: 13px; white-space: nowrap; text-decoration: none; }
 .btn:disabled { opacity: 0.5; cursor: default; }
@@ -122,7 +123,9 @@ button { cursor: pointer; }
 .sw.night { background: linear-gradient(135deg, #272434 0 52%, #B9A8F0 52%); }
 
 /* notices */
-.banner { padding: 12px 16px; border-radius: 16px; background: var(--panel); box-shadow: 0 3px 0 var(--edge); font-size: 13px; }
+.banner { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px 16px; border-radius: 16px; background: var(--panel); box-shadow: 0 3px 0 var(--edge); font-size: 13px; }
+.banner[hidden] { display: none; }
+.banner p { flex: 1 1 240px; }
 .notice { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px 16px; border-radius: 16px; background: var(--panel); box-shadow: 0 3px 0 var(--edge); font-size: 13px; }
 .notice p { flex: 1 1 240px; }
 .notice.hl { background: color-mix(in srgb, var(--tape2) 32%, var(--panel)); }
@@ -336,7 +339,7 @@ button { cursor: pointer; }
     </div>
   </header>
 
-  <p class="banner" id="banner" role="status" hidden></p>
+  <div class="banner" id="banner" role="status" hidden><p id="banner-text"></p><button type="button" class="btn-soft sm" id="banner-act" hidden></button></div>
 
   <section class="paper welcome" id="welcome" aria-labelledby="w-title" hidden>
     <span class="tape t1" aria-hidden="true">はじめに</span>
