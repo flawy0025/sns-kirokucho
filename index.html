@@ -240,6 +240,23 @@ button { cursor: pointer; }
 .tool-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap: 14px; }
 .tool { display: grid; gap: 10px; align-content: start; padding: 16px; border-radius: 16px; border: 1.5px solid var(--rule); min-width: 0; }
 .tool h3 { font-size: 15px; font-weight: 700; }
+.tool.gh { grid-column: 1 / -1; }
+.tool.gh summary { display: flex; align-items: center; gap: 10px; cursor: pointer; list-style: none; min-height: 28px; }
+.tool.gh summary::-webkit-details-marker { display: none; }
+.tool.gh summary::after { content: ""; width: 8px; height: 8px; margin-left: auto; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); transition: transform .2s; }
+.tool.gh[open] summary::after { transform: rotate(225deg); }
+.gh-tag { font-size: 11px; color: var(--muted); padding: 2px 8px; border-radius: 999px; border: 1px solid var(--rule); }
+#gh-form, #gh-on { display: grid; gap: 10px; }
+#gh-form[hidden], #gh-on[hidden] { display: none; }
+.gh-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 10px; }
+.gh-fields .field input { font-family: var(--font-body); font-size: 16px; }
+.gh-line { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--fg) !important; word-break: break-all; }
+.gh-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--pos); flex: none; }
+.gh-states { display: flex; flex-wrap: wrap; gap: 6px; }
+.gh-state { font-size: 12px; padding: 3px 10px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--rule); color: var(--fg); }
+.gh-state.bad { border-color: var(--warn); color: var(--warn); }
+#sync-notice p { white-space: pre-line; }
+.tbl td.date .auto { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 6px; font-size: 10px; line-height: 16px; background: var(--accent-soft); color: var(--accent); vertical-align: 1px; }
 .tool p { font-size: 13px; color: var(--muted); }
 .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .msg { font-size: 13px; color: var(--fg); }
@@ -338,6 +355,11 @@ button { cursor: pointer; }
       </button>
     </div>
   </header>
+
+  <div class="notice hl" id="sync-notice" role="status" hidden>
+    <p id="sync-notice-text"></p>
+    <button type="button" class="btn-soft sm" id="sync-notice-open">設定を見る</button>
+  </div>
 
   <div class="banner" id="banner" role="status" hidden><p id="banner-text"></p><button type="button" class="btn-soft sm" id="banner-act" hidden></button></div>
 
@@ -572,6 +594,30 @@ button { cursor: pointer; }
           <button type="button" class="btn" id="imp-cancel">やめる</button>
         </div>
       </div>
+      <details class="tool gh" id="gh-tool">
+        <summary><h3>自動取得とつなぐ</h3><span class="gh-tag">上級者向け</span></summary>
+        <p>GitHub に、自分で自動取得の仕組み（X・Threads の数字を毎日保存するリポジトリ）を用意している人向けです。つなぐと、記録帳を開いたときに新しい記録を取り込みます。</p>
+        <div id="gh-form">
+          <div class="gh-fields">
+            <div class="field"><label for="gh-repo">リポジトリ</label><input type="text" id="gh-repo" placeholder="ユーザー名/リポジトリ名" autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="url"></div>
+            <div class="field"><label for="gh-token">鍵（読み取り専用のトークン）</label><input type="password" id="gh-token" placeholder="github_pat_…" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+          </div>
+          <div class="row"><button type="button" class="btn-main sm" id="gh-connect">つなぐ</button></div>
+          <p class="msg" id="gh-form-msg" role="status"></p>
+          <p class="hint">鍵は、そのリポジトリだけを読める読み取り専用のもの（Fine-grained token・Contents: Read-only）を使ってください。鍵はこの端末のブラウザの中にだけ保存され、GitHub に記録を読みに行くときにしか使いません。書き出すファイルや保存する画像にも入りません。</p>
+        </div>
+        <div id="gh-on" hidden>
+          <p class="gh-line"><span class="gh-dot" aria-hidden="true"></span><span id="gh-repo-name"></span> とつながっています</p>
+          <p class="hint" id="gh-last"></p>
+          <div class="gh-states" id="gh-states"></div>
+          <p class="msg" id="gh-msg" role="status"></p>
+          <div class="row">
+            <button type="button" class="btn" id="gh-sync">今すぐ取り込む</button>
+            <button type="button" class="btn" id="gh-off">つなぐのをやめる</button>
+          </div>
+          <p class="hint">取り込むのは空欄でない数字だけです。手で入れた note の数字やメモ、取り込んだあとに手で直した数字はそのまま残ります。つないでいる間は、消した記録も次に開いたときに取り込み直されます。</p>
+        </div>
+      </details>
       <div class="tool">
         <h3>アプリとして使う</h3>
         <p>ホーム画面に追加すると、アプリのように開けて、通信がなくても記録を見られます。</p>

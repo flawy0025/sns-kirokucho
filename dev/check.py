@@ -8,6 +8,7 @@
 
 必要なもの: Python の playwright と Chromium（`pip install playwright` → `playwright install chromium`）
 """
+import datetime
 import json
 import pathlib
 import re
@@ -45,6 +46,14 @@ def main():
     check(DATA_VERSION is not None, 'app.js に DATA_VERSION がある')
     check(f"const DATA_KEY = '{DATA_KEY}';" in APP, f'保存の名前が {DATA_KEY} のまま')
     check('localStorage.clear' not in APP, 'localStorage.clear() を使っていない（同じアドレスの他アプリを消さない）')
+    published = [f for f in ROOT.rglob('*') if f.is_file() and '.git' not in f.parts and 'dev' not in f.relative_to(ROOT).parts
+                 and f.suffix in ('.html', '.js', '.json', '.webmanifest', '.md', '.txt')]
+    token_re = re.compile(r'github_pat_[A-Za-z0-9_]{20,}|gh[pousr]_[A-Za-z0-9]{30,}')
+    leaks = [str(f.relative_to(ROOT)) for f in published if token_re.search(f.read_text(encoding='utf-8', errors='ignore'))]
+    check(not leaks, '公開するファイルに鍵が入っていない' + (f': {leaks}' if leaks else ''))
+    code = {n: (ROOT / n).read_text(encoding='utf-8') for n in ('app.js', 'index.html', 'ocr-parse.js', 'sw.js')}
+    named = [n for n, t in code.items() if re.search(r'flawy0025/(?!sns-kirokucho)', t) or re.search(r'id="gh-repo"[^>]*\svalue=', t)]
+    check(not named, 'アプリのファイルに、つなぐ先のリポジトリが書かれていない' + (f': {named}' if named else ''))
 
     port = free_port()
     srv = subprocess.Popen([sys.executable, '-m', 'http.server', str(port), '--bind', '127.0.0.1'], cwd=ROOT,
@@ -56,11 +65,20 @@ def main():
             browser = pw.chromium.launch()
             errors = []
 
-            def page(seed):
+            gh_calls = []
+            all_reqs = []
+
+            def no_github(route):
+                gh_calls.append(route.request.url)
+                route.abort()
+
+            def page(seed, gh=None):
                 ctx = browser.new_context(viewport={'width': 400, 'height': 860}, accept_downloads=True, service_workers='block')
                 ctx.route(re.compile(r'https://(fonts\.googleapis\.com|fonts\.gstatic\.com|cdn\.jsdelivr\.net)/.*'), lambda r: r.abort())
+                ctx.route('https://api.github.com/**', gh or no_github)
                 pg = ctx.new_page()
                 pg.on('pageerror', lambda e: errors.append(str(e)))
+                pg.on('request', lambda r: all_reqs.append((r.url, r.headers.get('authorization'))))
                 pg.goto(url)
                 pg.evaluate('(seed) => { localStorage.clear(); for (const [k, v] of Object.entries(seed)) localStorage.setItem(k, v); }', seed)
                 pg.reload(); pg.wait_for_timeout(500)
@@ -151,6 +169,86 @@ def main():
             check(st.get('sns-kirokucho.theme') == 'mist' and st.get('other-app.data') == 'keep-me', '色の設定と他アプリの保存は残る')
             ctx.close()
 
+            check(not gh_calls, 'つないでいないときは GitHub に問い合わせない')
+
+            print('7. 自動取得とつなぐ（試験用の GitHub）')
+            TOKEN = 'github_pat_TEST' + 'x' * 40
+            REPO = 'test-user/stats-repo'
+            t0 = datetime.date.today()
+            ds = [(t0 - datetime.timedelta(days=i)).isoformat() for i in range(10, 0, -1)]
+            def jst(d, days, hm):
+                return (datetime.datetime.fromisoformat(d) + datetime.timedelta(days=days, hours=int(hm[:2]) - 9, minutes=int(hm[3:]))).isoformat() + 'Z'
+            remote = {}
+            for k, d in enumerate(ds):
+                remote[d] = {'date': d, 'x': {'followers': 100 + k, 'impressions': 1000 + k, 'posts': 3, 'engagement': 9},
+                             'threads': {'followers': 50 + k, 'impressions': 500 + k, 'posts': 2, 'engagement': 4, 'post_views': 7},
+                             'note': {'followers': None, 'pv': None, 'impressions': None, 'likes': None},
+                             'memo': '', 'fetchedAt': jst(d, 1, '06:10'), 'state': {'x': 'ok', 'threads': 'expired'}}
+            late = ds[2]
+            remote[late]['fetchedAt'] = jst(late, 4, '20:00')  # 後から取り直した日
+            files = {'data/index.json': {'updatedAt': datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'), 'latest': ds[-1], 'dates': ds},
+                     'data/health.json': {'x': {'state': 'ok'}, 'threads': {'state': 'expired', 'message': '（試験）'}, 'note': {'state': 'manual'}}}
+            files.update({f'data/records/{d}.json': r for d, r in remote.items()})
+            seen_auth = []
+
+            def fake_github(route):
+                req = route.request
+                gh_calls.append(req.url)
+                seen_auth.append(req.headers.get('authorization'))
+                m2 = re.match(r'https://api\.github\.com/repos/([^/]+/[^/]+)/contents/(.+)$', req.url)
+                if req.method == 'OPTIONS':
+                    route.fulfill(status=204, headers={'access-control-allow-origin': '*', 'access-control-allow-headers': 'authorization, accept'}); return
+                if req.headers.get('authorization') != f'Bearer {TOKEN}':
+                    route.fulfill(status=401, body='{}', headers={'access-control-allow-origin': '*'}); return
+                if not m2 or m2.group(1) != REPO or m2.group(2) not in files:
+                    route.fulfill(status=404, body='{}', headers={'access-control-allow-origin': '*'}); return
+                route.fulfill(status=200, body=json.dumps(files[m2.group(2)]), headers={'access-control-allow-origin': '*', 'content-type': 'application/vnd.github.raw+json'})
+
+            mine = {
+                ds[0]: {'date': ds[0], 'x': {'followers': None, 'impressions': None, 'posts': None, 'engagement': None},
+                        'threads': {'followers': None, 'impressions': None, 'posts': None, 'engagement': None},
+                        'note': {'followers': 31, 'pv': 77, 'impressions': 900, 'likes': 4}, 'memo': '手で書いたメモ'},
+                ds[1]: {'date': ds[1], 'x': {'followers': 101, 'impressions': 4321, 'posts': 3, 'engagement': 9},
+                        'threads': {'followers': 51, 'impressions': 501, 'posts': 2, 'engagement': 4},
+                        'note': {'followers': None, 'pv': None, 'impressions': None, 'likes': None}, 'memo': '',
+                        'auto': {'from': 'github', 'fetchedAt': remote[ds[1]]['fetchedAt'], 'got': {'x': {'impressions': 1001}, 'threads': {}, 'note': {}}}},
+                late: {'date': late, 'x': {'followers': 88, 'impressions': None, 'posts': None, 'engagement': None},
+                       'threads': {'followers': None, 'impressions': None, 'posts': None, 'engagement': None},
+                       'note': {'followers': None, 'pv': None, 'impressions': None, 'likes': None}, 'memo': ''},
+            }
+            seed_data = json.dumps({'version': 1, 'records': mine, 'settings': {'platforms': {'x': True, 'threads': True, 'note': True}}, 'lastBackupAt': None})
+
+            ctx, pg = page({DATA_KEY: seed_data}, fake_github)
+            pg.click('#gh-tool summary')
+            pg.fill('#gh-repo', 'test-user/stats-repo'); pg.fill('#gh-token', 'wrong-token'); pg.click('#gh-connect')
+            pg.wait_for_function("document.querySelector('#gh-form-msg').textContent.includes('鍵が使えません')", timeout=8000)
+            check('sns-kirokucho.github' not in storage(pg), '鍵がまちがっているときは、つながず保存もしない')
+            pg.fill('#gh-repo', 'https://github.com/test-user/stats-repo'); pg.fill('#gh-token', TOKEN); pg.click('#gh-connect')
+            pg.wait_for_function("!document.querySelector('#gh-on').hidden && document.querySelector('#gh-last').textContent.includes('確かめました')", timeout=10000)
+            st = storage(pg)
+            saved = json.loads(st[DATA_KEY])['records']
+            check(sorted(saved) == ds, f'{len(ds)} 日分がそろう')
+            check(saved[ds[5]]['x']['impressions'] == 1005 and saved[ds[5]]['threads']['followers'] == 55, '取れた数字が入る')
+            check(saved[ds[0]]['note'] == mine[ds[0]]['note'] and saved[ds[0]]['memo'] == '手で書いたメモ', '手で入れた note の数字とメモは残る')
+            check(saved[ds[1]]['x']['impressions'] == 4321, '取り込んだあとに手で直した数字は上書きしない')
+            check(saved[late]['x']['followers'] == 88 and saved[late]['x']['impressions'] == 1002, '後から取り直した日のフォロワー数は使わない（ほかの数字は入る）')
+            check(TOKEN not in st[DATA_KEY] and REPO not in st[DATA_KEY], '記録の中に鍵やリポジトリ名が入らない')
+            check(pg.input_value('#gh-token') == '', 'つないだあと、鍵の入力欄は空になる')
+            check(pg.is_visible('#sync-notice') and 'Threads のログインが切れています' in pg.text_content('#sync-notice-text'), '取得の不具合（ログイン切れ）を上に知らせる')
+            check(pg.locator('#rec-body .auto').count() >= len(ds) - 1, '一覧に「自動」の印が付く')
+            with pg.expect_download() as dl:
+                pg.click('#exp-json')
+            exported = pathlib.Path(dl.value.path()).read_text(encoding='utf-8')
+            check(TOKEN not in exported and REPO not in exported, '書き出すファイルに鍵やリポジトリ名が入らない')
+            elsewhere = [u for u, a in all_reqs if not u.startswith('https://api.github.com/') and (a or TOKEN in u)]
+            check(not elsewhere and not any(TOKEN in u for u, _ in all_reqs), '鍵は GitHub への問い合わせにだけ使い、アドレスにも入れない')
+            n_calls = len(gh_calls)
+            pg.reload(); pg.wait_for_timeout(700)
+            check(len(gh_calls) == n_calls, '開き直しても、20分以内は問い合わせない')
+            pg.click('#gh-tool summary'); pg.click('#gh-off'); pg.wait_for_timeout(200)
+            st = storage(pg)
+            check('sns-kirokucho.github' not in st and len(json.loads(st[DATA_KEY])['records']) == len(ds), 'つなぐのをやめると鍵は消え、記録は残る')
+            ctx.close()
             check(not errors, 'ページのエラーなし' + ('' if not errors else f': {errors[:3]}'))
             browser.close()
     finally:

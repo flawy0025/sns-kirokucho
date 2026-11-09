@@ -571,8 +571,10 @@
       const tr = document.createElement('tr');
       const xp = val(r, 'x', 'posts'); const tp = val(r, 'threads', 'posts');
       const posts = [on('x') ? (xp === null ? '–' : fmtInt(xp)) : null, on('threads') ? (tp === null ? '–' : fmtInt(tp)) : null].filter((v) => v !== null);
+      const dateCell = cell(mdw(r.date), 'date');
+      if (!S.sampleMode && isPlain(r.auto)) { const a = document.createElement('small'); a.className = 'auto'; a.textContent = '自動'; a.title = 'GitHub から取り込んだ数字があります'; dateCell.append(a); }
       tr.append(
-        cell(mdw(r.date), 'date'),
+        dateCell,
         folCell(r, 'x'), numCell(val(r, 'x', 'impressions'), 'c-x'),
         folCell(r, 'threads'), numCell(val(r, 'threads', 'impressions'), 'c-threads'),
         numCell(val(r, 'note', 'pv'), 'c-note'),
@@ -1459,6 +1461,256 @@
     refresh();
   }
 
+  /* ---------- GitHub とつなぐ（自分の自動取得リポジトリから読む） ---------- */
+  // つなぐ先と鍵は、この端末のブラウザの中（GH_KEY）にだけ保存する。
+  // 記録（DATA）や書き出すファイルには入れない。アプリのファイルにも書かない。
+  // 読むのは data/index.json・data/records/<日付>.json・data/health.json だけ。書き込みはしない。
+  const GH_KEY = 'sns-kirokucho.github';
+  const GH_API = 'https://api.github.com';
+  const GH_EVERY = 20 * 60000; // 自動で見に行くのは20分に1回まで
+  const GH_RECENT = 8; // 取り直すのは直近8日分（後から数字が増える日のため）
+  const REPO_RE = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})\/[A-Za-z0-9._-]{1,100}$/;
+  const GH = { busy: false, lastTry: 0 };
+
+  function ghLoad() {
+    try {
+      const v = JSON.parse(localStorage.getItem(GH_KEY) || 'null');
+      return isPlain(v) && typeof v.repo === 'string' && typeof v.token === 'string' && v.token ? v : null;
+    } catch (e) {
+      return null;
+    }
+  }
+  function ghSave(v) {
+    try {
+      if (v) localStorage.setItem(GH_KEY, JSON.stringify(v)); else localStorage.removeItem(GH_KEY);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function ghError(kind) { const e = new Error(kind); e.kind = kind; return e; }
+
+  async function ghFile(conn, file) {
+    let res;
+    try {
+      res = await fetch(`${GH_API}/repos/${conn.repo}/contents/${file}`, {
+        headers: { Authorization: `Bearer ${conn.token}`, Accept: 'application/vnd.github.raw+json' },
+        cache: 'no-store',
+      });
+    } catch (e) {
+      throw ghError('network');
+    }
+    if (res.status === 404) return null;
+    if (res.status === 401) throw ghError('auth');
+    if (res.status === 403) throw ghError(res.headers.get('x-ratelimit-remaining') === '0' ? 'rate' : 'forbidden');
+    if (!res.ok) throw ghError('http');
+    try { return JSON.parse(await res.text()); } catch (e) { throw ghError('format'); }
+  }
+
+  async function pool(items, n, fn) {
+    const out = new Array(items.length);
+    let i = 0;
+    await Promise.all(Array.from({ length: Math.min(n, items.length) }, async () => {
+      while (i < items.length) { const k = i; i += 1; out[k] = await fn(items[k]); }
+    }));
+    return out;
+  }
+
+  // GitHub の記録を、この端末の記録に重ねる
+  //  - 取れた数字（空欄以外）だけを入れる。手で入れた他の項目やメモは残す
+  //  - フォロワー数は「その日の翌日の正午（日本時間）まで」に取ったものだけ使う
+  //  - 前に取り込んだ数字をあなたが手で直していたら、その数字は上書きしない
+  const folDeadline = (date) => Date.parse(`${addDays(date, 1)}T12:00:00+09:00`);
+  function mergeRemote(g) {
+    if (!isPlain(g) || !isDate(g.date)) return false;
+    const date = g.date;
+    const before = DATA.records[date];
+    const doc = before ? JSON.parse(JSON.stringify(before)) : { date, x: {}, threads: {}, note: {}, memo: '' };
+    const prev = isPlain(doc.auto) && isPlain(doc.auto.got) ? doc.auto.got : {};
+    const got = { x: {}, threads: {}, note: {} };
+    const fetchedAt = Date.parse(g.fetchedAt || '');
+    let changed = false;
+    for (const p of PLATS) {
+      doc[p] = isPlain(doc[p]) ? doc[p] : {};
+      if (!before) FIELDS[p].forEach(([f]) => { doc[p][f] = null; });
+      for (const [f, v] of Object.entries(isPlain(g[p]) ? g[p] : {})) {
+        const n = num(v);
+        if (n === null) continue;
+        if (f === 'followers' && !(fetchedAt <= folDeadline(date))) continue;
+        const cur = num(doc[p][f]);
+        const was = isPlain(prev[p]) && prev[p][f] !== undefined ? num(prev[p][f]) : undefined;
+        if (cur !== null && was !== undefined && cur !== was) { got[p][f] = was; continue; } // 手で直した数字は残す
+        got[p][f] = n;
+        if (cur !== n) { doc[p][f] = n; changed = true; }
+      }
+    }
+    const meta = JSON.stringify(prev) !== JSON.stringify(got);
+    if (!changed && !meta) return false;
+    if (changed) doc.updatedAt = new Date().toISOString();
+    doc.auto = { from: 'github', fetchedAt: g.fetchedAt || null, got };
+    DATA.records[date] = doc;
+    return changed ? 'changed' : 'meta';
+  }
+
+  async function ghSync(opts = {}) {
+    const conn = ghLoad();
+    if (!conn || GH.busy || !storageOk) return;
+    const last = conn.lastSyncAt ? Date.parse(conn.lastSyncAt) : 0;
+    if (!opts.force && (Date.now() - last < GH_EVERY || Date.now() - GH.lastTry < 60000)) return;
+    GH.busy = true; GH.lastTry = Date.now();
+    renderGh('取り込んでいます…');
+    const result = { error: null, changed: 0 };
+    let index = null; let health = null;
+    try {
+      index = await ghFile(conn, 'data/index.json');
+      if (!isPlain(index) || !Array.isArray(index.dates)) throw ghError('notfound');
+      const dates = index.dates.filter(isDate).sort();
+      const recent = new Set(dates.slice(-GH_RECENT));
+      const seen = new Set(Array.isArray(conn.seen) ? conn.seen : []);
+      const want = dates.filter((d) => recent.has(d) || !seen.has(d) || !DATA.records[d]).slice(-400);
+      const docs = await pool(want, 6, (d) => ghFile(conn, `data/records/${d}.json`).catch((e) => {
+        if (e.kind === 'auth' || e.kind === 'forbidden' || e.kind === 'rate' || e.kind === 'network') throw e;
+        return null;
+      }));
+      health = await ghFile(conn, 'data/health.json').catch(() => null);
+      let touched = 0;
+      docs.forEach((g, k) => {
+        if (!g) return;
+        seen.add(want[k]);
+        const r = mergeRemote(g);
+        if (r) touched += 1;
+        if (r === 'changed') result.changed += 1;
+      });
+      if (touched && !persist()) { loadData(); throw ghError('save'); }
+      conn.seen = [...seen].filter((d) => dates.includes(d));
+      conn.lastSyncAt = new Date().toISOString();
+      conn.indexUpdatedAt = typeof index.updatedAt === 'string' ? index.updatedAt : null;
+      conn.health = isPlain(health) ? health : null;
+      conn.lastError = null;
+    } catch (e) {
+      result.error = e.kind || 'http';
+      conn.lastError = { kind: result.error, at: new Date().toISOString() };
+    }
+    // 取り込んでいる間に「つなぐのをやめる」が押されていたら、何も残さない
+    const now = ghLoad();
+    if (now && now.repo === conn.repo && now.token === conn.token) ghSave(conn);
+    GH.busy = false;
+    if (result.changed) {
+      if (!S.sampleMode) refresh(); else renderNotices();
+      toast(`自動取得の記録を取り込みました（${result.changed}日分）`);
+    }
+    renderGh();
+    return result;
+  }
+
+  const GH_ERR = {
+    network: '通信できませんでした。電波のよいところで、もう一度試してください。',
+    auth: '鍵が使えませんでした。期限が切れたか、無効になっている可能性があります。新しい鍵を作って、つなぎ直してください。',
+    forbidden: 'この鍵では、このリポジトリを読めませんでした。鍵の「読めるリポジトリ」と「Contents: Read-only」を確かめてください。',
+    notfound: 'リポジトリか、自動取得の記録（data/index.json）が見つかりませんでした。名前と、鍵で読めるリポジトリを確かめてください。',
+    rate: 'GitHub への問い合わせが多すぎたようです。しばらくしてから試してください。',
+    format: '自動取得の記録の形が読めませんでした。',
+    save: '',
+    http: 'GitHub から記録を読めませんでした。しばらくしてから試してください。',
+  };
+  const ghErrText = (kind) => (kind === 'save' ? saveFailMsg('この端末に保存できませんでした。') : GH_ERR[kind] || GH_ERR.http);
+
+  const STATE_TEXT = { ok: '取得OK', manual: '手動', expired: 'ログイン切れ', billing: 'クレジット不足', error: 'エラー', missing: '鍵が未登録' };
+  function healthProblems(conn) {
+    const out = [];
+    if (!conn) return out;
+    if (conn.lastError && ['auth', 'forbidden', 'notfound'].includes(conn.lastError.kind)) out.push(`GitHub：${ghErrText(conn.lastError.kind)}`);
+    const h = conn.health;
+    if (isPlain(h)) {
+      ['x', 'threads'].filter(on).forEach((p) => {
+        const st = isPlain(h[p]) ? h[p].state : null;
+        if (st === 'expired') out.push(`${NAMES[p]} のログインが切れています。GitHub の Secrets で鍵を入れ直してください。`);
+        else if (st === 'billing') out.push(`${NAMES[p]} のクレジットが足りないため、取得できていません。`);
+        else if (st === 'missing') out.push(`${NAMES[p]} の鍵が GitHub に登録されていません。`);
+        else if (st === 'error') out.push(`${NAMES[p]} の取得でエラーが出ています。GitHub の Actions を確かめてください。`);
+      });
+    }
+    const upd = conn.indexUpdatedAt ? Date.parse(conn.indexUpdatedAt) : NaN;
+    if (Number.isFinite(upd) && Date.now() - upd > 36 * 3600000) {
+      out.push(`自動取得が ${Math.floor((Date.now() - upd) / 3600000)} 時間止まっているようです。GitHub の Actions を確かめてください。`);
+    }
+    return out;
+  }
+
+  const clock = (iso) => { const t = new Date(iso); return Number.isNaN(+t) ? '—' : `${t.getMonth() + 1}/${t.getDate()} ${t.getHours()}:${String(t.getMinutes()).padStart(2, '0')}`; };
+
+  function renderGh(busyText) {
+    const conn = ghLoad();
+    $('#gh-form').hidden = !!conn;
+    $('#gh-on').hidden = !conn;
+    $('#gh-sync').disabled = GH.busy;
+    $('#gh-connect').disabled = GH.busy;
+    const probs = healthProblems(conn);
+    $('#sync-notice').hidden = !probs.length || S.sampleMode;
+    setText($('#sync-notice-text'), probs.join('\n'));
+    if (!conn) return;
+    setText($('#gh-repo-name'), conn.repo);
+    setText($('#gh-last'), busyText || (conn.lastSyncAt ? `${clock(conn.lastSyncAt)} に確かめました` : 'まだ取り込んでいません'));
+    const h = isPlain(conn.health) ? conn.health : {};
+    $('#gh-states').replaceChildren(...PLATS.filter(on).map((p) => {
+      const st = isPlain(h[p]) ? h[p].state : null;
+      const el = document.createElement('span');
+      el.className = `gh-state${st && st !== 'ok' && st !== 'manual' ? ' bad' : ''}`;
+      el.textContent = `${NAMES[p]}：${STATE_TEXT[st] || '—'}`;
+      return el;
+    }));
+    const msg = $('#gh-msg');
+    msg.classList.toggle('err', !!conn.lastError);
+    setText(msg, conn.lastError ? ghErrText(conn.lastError.kind) : '');
+  }
+
+  async function ghConnect() {
+    const msg = $('#gh-form-msg');
+    msg.classList.add('err');
+    const repo = $('#gh-repo').value.trim().replace(/^https?:\/\/github\.com\//i, '').replace(/\.git$/i, '').replace(/\/+$/, '');
+    const token = $('#gh-token').value.trim();
+    if (!REPO_RE.test(repo)) { setText(msg, 'リポジトリは「ユーザー名/リポジトリ名」の形で入れてください。'); $('#gh-repo').focus(); return; }
+    if (!token) { setText(msg, '鍵を入れてください。'); $('#gh-token').focus(); return; }
+    msg.classList.remove('err');
+    setText(msg, '確かめています…');
+    $('#gh-connect').disabled = true;
+    try {
+      const index = await ghFile({ repo, token }, 'data/index.json');
+      if (!isPlain(index) || !Array.isArray(index.dates)) throw ghError('notfound');
+    } catch (e) {
+      $('#gh-connect').disabled = false;
+      msg.classList.add('err');
+      setText(msg, ghErrText(e.kind));
+      return;
+    }
+    if (!ghSave({ repo, token, connectedAt: new Date().toISOString(), seen: [] })) {
+      $('#gh-connect').disabled = false;
+      msg.classList.add('err'); setText(msg, 'この端末に保存できませんでした。'); return;
+    }
+    $('#gh-token').value = '';
+    setText(msg, '');
+    renderGh();
+    const r = await ghSync({ force: true });
+    if (r && !r.error && !r.changed) toast('つながりました。新しい記録はまだありません');
+  }
+
+  function ghDisconnect() {
+    ghSave(null);
+    $('#gh-repo').value = '';
+    $('#gh-token').value = '';
+    renderGh();
+    setText($('#gh-form-msg'), 'つなぐのをやめました。取り込んだ記録はそのまま残ります。');
+    $('#gh-form-msg').classList.remove('err');
+  }
+
+  function openGhSettings() {
+    const box = $('#gh-tool');
+    box.open = true;
+    box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+
   /* ---------- controls ---------- */
   const THEMES = { notebook: '#F3EFF6', mist: '#EEF3F6', night: '#1C1A27' };
   function applyTheme(name) {
@@ -1527,6 +1779,12 @@
   $('#img-cancel').addEventListener('click', closeImageSheet);
   $('#img-save').addEventListener('click', saveImage);
   $('#img-sheet').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeImageSheet(); });
+  $('#gh-connect').addEventListener('click', ghConnect);
+  $('#gh-token').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); ghConnect(); } });
+  $('#gh-sync').addEventListener('click', () => ghSync({ force: true }));
+  $('#gh-off').addEventListener('click', ghDisconnect);
+  $('#sync-notice-open').addEventListener('click', openGhSettings);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') ghSync(); });
 
   window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); S.installEvt = e; renderNotices(); });
   $('#install-btn').addEventListener('click', async () => {
@@ -1536,7 +1794,7 @@
   });
 
   // 別のタブで記録が変わったとき
-  window.addEventListener('storage', (e) => { if (e.key === DATA_KEY) { loadData(); showStorageNotice(); if (!S.sampleMode) refresh(); } });
+  window.addEventListener('storage', (e) => { if (e.key === DATA_KEY) { loadData(); showStorageNotice(); if (!S.sampleMode) refresh(); } if (e.key === GH_KEY) renderGh(); });
 
   let rz = null;
   const ro = new ResizeObserver(() => {
@@ -1550,6 +1808,8 @@
   loadData();
   showStorageNotice();
   refresh();
+  renderGh();
+  ghSync();
 
   if ('serviceWorker' in navigator && location.protocol === 'https:') {
     window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });

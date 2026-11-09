@@ -1,6 +1,6 @@
 // SNS 記録帳：通信がなくても開けるようにするための仕組み（service worker）
 // 記録そのものは扱いません（記録はブラウザの localStorage にあります）。
-const VERSION = 'v4';
+const VERSION = 'v5';
 const APP = `sns-kirokucho-app-${VERSION}`;
 const EXT = 'sns-kirokucho-ext';
 const FILES = [
@@ -37,6 +37,8 @@ self.addEventListener('fetch', (event) => {
     );
     return;
   }
+
+  // GitHub（自動取得とつなぐ）など、ほかの場所への問い合わせはしまわない（記録や鍵を残さないため）
 
   // 文字のデータ（Google Fonts）と読み取り用のプログラム（jsDelivr）：しまってあれば使う
   if (/^(fonts\.googleapis\.com|fonts\.gstatic\.com|cdn\.jsdelivr\.net)$/.test(url.hostname)) {

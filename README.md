@@ -13,6 +13,7 @@ X・Threads・note のフォロワーやインプレッションを、手帖の�
 - この2週間に書いた日をスタンプで見る
 - 色を「手帖」「霧」「夜」の3つから選ぶ（選んだ色は保存した画像にも反映されます）
 - ダッシュボードのまとめを画像（1080×1350）で保存する
+- （上級者向け）自分で用意した GitHub の自動取得リポジトリとつなぎ、開いたときに新しい記録を取り込む
 - 記録を JSON・CSV で書き出す / 取り込む
 - ホーム画面に追加して、アプリのように使う（通信がなくても開けます）
 
@@ -46,7 +47,3 @@ X・Threads・note のフォロワーやインプレッションを、手帖の�
 - [D3.js](https://d3js.org/) v7.8.5（ISC License）— `vendor/d3.LICENSE.txt`
 - [Tesseract.js](https://github.com/naptha/tesseract.js) v5.1.1（Apache License 2.0）— 使うときに jsDelivr から読み込み
 - フォント：Kiwi Maru、Noto Sans JP、Quicksand（Google Fonts、SIL Open Font License）
-
----
-
-更新する人へ：使っている人の記録を消さないためのきまりと、公開前のチェックは [dev/MAINTAINING.md](dev/MAINTAINING.md) にあります。
